@@ -6,20 +6,21 @@
 #    By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/27 18:45:45 by mmansuri          #+#    #+#              #
-#    Updated: 2025/02/28 16:26:29 by mmansuri         ###   ########.fr        #
+#    Updated: 2025/03/11 17:23:18 by ftapponn         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME                = ircserv
-SRCS                = main.cpp
+SRCS                = main.cpp src/Client/Client.cpp
 CFLAGS              = -Wall -Werror -Wextra -std=c++11
+Include 			= -I src/
 OBJS                = $(SRCS:%.cpp=%.o)
 CC                  = c++
 
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(SRCS) -o $(NAME)
+	$(CC) $(CFLAGS) $(SRCS) $(INCLUDE)-o $(NAME)
 
 # Lexer and parser rules
 SRC_lexer            = src/parser.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp

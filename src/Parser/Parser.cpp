@@ -1,4 +1,6 @@
 #include "Parser.hpp"
+#include <algorithm>
+#include <cctype>
 
 bool Parser::validateCommand(const std::string &cmd)
 {
@@ -28,28 +30,29 @@ bool Parser::validateCommand(const std::string &cmd)
     return validCommands.count(upperCmd) > 0;
 }
 
-
-
 bool Parser::validateParameters(const std::string &cmd, const std::vector<std::string> &params)
 {
     std::string upperCmd = toUpper(cmd);
-    
+
     if (upperCmd == "NICK") {
         return params.size() == 1 && !params[0].empty() && params[0].length() <= 9;
     }
     else if (upperCmd == "USER") {
         return params.size() >= 4;
     }
-    else if (upperCmd == "JOIN") {
-        return params.size() >= 1 && !params[0].empty();
-    }
+	else if (upperCmd == "JOIN") {
+	    return params.size() == 1 && !params[0].empty() && isValidChannel(params[0]);
+	}
     else if (upperCmd == "PRIVMSG" || upperCmd == "NOTICE") {
-        return params.size() >= 2 && !params[0].empty();
+        if (params.size() < 2 || params[0].empty())
+            return false;
+
+        return isValidChannel(params[0]) || isValidNickname(params[0]);
     }
     else if (upperCmd == "PING" || upperCmd == "PONG") {
         return params.size() >= 1;
     }
-    
+
     return true;
 }
 
@@ -60,6 +63,25 @@ std::string Parser::toUpper(const std::string &str)
     return result;
 }
 
+bool Parser::isValidChannel(const std::string &target)
+{
+    return !target.empty() && target[0] == '#';
+}
+
+
+bool Parser::isValidNickname(const std::string &target)
+{
+    if (target.empty())
+	{
+        return false;
+    }
+    for (size_t i = 0; i < target.size(); ++i) {
+        if (!std::isalnum(target[i])) {
+            return false;
+        }
+    }
+    return true;
+}
 void Parser::parse(const IrcMessage &msg)
 {
     if (!validateCommand(msg.command)) {

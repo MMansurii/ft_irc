@@ -6,7 +6,7 @@
 #    By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/27 18:45:45 by mmansuri          #+#    #+#              #
-#    Updated: 2025/03/11 17:23:18 by ftapponn         ###   ########.fr        #
+#    Updated: 2025/03/11 19:56:36 by ftapponn         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,7 +22,6 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) $(SRCS) $(INCLUDE)-o $(NAME)
 
-# Lexer and parser rules
 SRC_lexer            = src/parser.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp
 OBJS_lexer           = $(SRC_lexer:.cpp=.o)
 INCLUDE_lexer        = -I src/

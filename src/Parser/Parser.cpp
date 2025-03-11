@@ -4,16 +4,12 @@ bool Parser::validateCommand(const std::string &cmd)
 {
     static std::set<std::string> validCommands;
     if (validCommands.empty()) {
-        validCommands.insert("CAP");
         validCommands.insert("PASS");
         validCommands.insert("NICK");
         validCommands.insert("USER");
-        validCommands.insert("PING");
-        validCommands.insert("PONG");
         validCommands.insert("JOIN");
         validCommands.insert("PART");
         validCommands.insert("PRIVMSG");
-        validCommands.insert("NOTICE");
         validCommands.insert("KICK");
         validCommands.insert("INVITE");
         validCommands.insert("TOPIC");

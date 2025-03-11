@@ -1,6 +1,4 @@
 #include "Parser.hpp"
-#include <algorithm>
-#include <cctype>
 
 bool Parser::validateCommand(const std::string &cmd)
 {
@@ -22,8 +20,7 @@ bool Parser::validateCommand(const std::string &cmd)
         validCommands.insert("MODE");
         validCommands.insert("QUIT");
     }
-    if (cmd.length() == 3 && std::isdigit(cmd[0]) && std::isdigit(cmd[1]) && std::isdigit(cmd[2]))
-    {
+    if (cmd.length() == 3 && std::isdigit(cmd[0]) && std::isdigit(cmd[1]) && std::isdigit(cmd[2])) {
         return true;
     }
     std::string upperCmd = toUpper(cmd);
@@ -40,13 +37,13 @@ bool Parser::validateParameters(const std::string &cmd, const std::vector<std::s
     else if (upperCmd == "USER") {
         return params.size() >= 4;
     }
-	else if (upperCmd == "JOIN") {
-	    return params.size() == 1 && !params[0].empty() && isValidChannel(params[0]);
-	}
+    else if (upperCmd == "JOIN") {
+        return params.size() == 1 && !params[0].empty() && isValidChannel(params[0]);
+    }
     else if (upperCmd == "PRIVMSG" || upperCmd == "NOTICE") {
-        if (params.size() < 2 || params[0].empty())
+        if (params.size() < 2 || params[0].empty()) {
             return false;
-
+        }
         return isValidChannel(params[0]) || isValidNickname(params[0]);
     }
     else if (upperCmd == "PING" || upperCmd == "PONG") {
@@ -68,11 +65,9 @@ bool Parser::isValidChannel(const std::string &target)
     return !target.empty() && target[0] == '#';
 }
 
-
 bool Parser::isValidNickname(const std::string &target)
 {
-    if (target.empty())
-	{
+    if (target.empty()) {
         return false;
     }
     for (size_t i = 0; i < target.size(); ++i) {
@@ -82,23 +77,31 @@ bool Parser::isValidNickname(const std::string &target)
     }
     return true;
 }
+
 void Parser::parse(const IrcMessage &msg)
 {
-    if (!validateCommand(msg.command)) {
-        std::cerr << "Invalid IRC command: " << msg.command << std::endl;
-        return;
+    try {
+        if (!validateCommand(msg.command)) {
+            std::cerr << "Invalid IRC command: " << msg.command << std::endl;
+            return;
+        }
+
+        if (!validateParameters(msg.command, msg.params)) {
+            std::cerr << "Invalid parameters for command: " << msg.command << std::endl;
+            return;
+        }
+
+        std::cout << "Command: " << msg.command << std::endl;
+
+        if (!msg.prefix.empty()) {
+            std::cout << "Prefix: " << msg.prefix << std::endl;
+        }
+
+        for (size_t i = 0; i < msg.params.size(); ++i) {
+            std::cout << "Param " << i + 1 << ": " << msg.params[i] << std::endl;
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Parsing error: " << e.what() << std::endl;
     }
-
-    if (!validateParameters(msg.command, msg.params)) {
-        std::cerr << "Invalid parameters for command: " << msg.command << std::endl;
-        return;
-    }
-
-    std::cout << "Command: " << msg.command << std::endl;
-
-    if (!msg.prefix.empty())
-        std::cout << "Prefix: " << msg.prefix << std::endl;
-
-    for (size_t i = 0; i < msg.params.size(); ++i)
-        std::cout << "Param " << i + 1 << ": " << msg.params[i] << std::endl;
 }
+

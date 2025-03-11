@@ -1,18 +1,20 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
-
-#include "../Lexer/Lexer.hpp"
+#include <algorithm>
+#include <cctype>
 #include <iostream>
+#include <stdexcept>
+#include "../Lexer/Lexer.hpp"
 #include <set>
 #include <regex>
 
-class Parser {
+class Parser 
+{
 public:
     static bool validateCommand(const std::string &cmd);
     static void parse(const IrcMessage &msg);
     static bool validateParameters(const std::string &cmd, const std::vector<std::string> &params);
     static std::string toUpper(const std::string &str);
-
 private:
     static bool isValidChannel(const std::string &target);
     static bool isValidNickname(const std::string &target);
@@ -22,5 +24,4 @@ private:
     static void printError(const std::string &msg);
     static void printParameterError(const std::string &cmd, const std::vector<std::string> &params);
 };
-
 #endif

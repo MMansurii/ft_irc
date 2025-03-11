@@ -4,13 +4,15 @@
 #include <string>
 #include <vector>
 
-struct IrcMessage {
+struct IrcMessage
+{
     std::string prefix;
     std::string command;
     std::vector<std::string> params;
 };
 
-class Lexer {
+class Lexer 
+{
 public:
     static IrcMessage tokenize(const std::string &input);
 };

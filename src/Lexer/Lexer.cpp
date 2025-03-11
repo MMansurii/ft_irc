@@ -1,30 +1,37 @@
 #include "Lexer.hpp"
 #include <sstream>
 
-IrcMessage Lexer::tokenize(const std::string &input) {
+
+IrcMessage Lexer::tokenize(const std::string &input)
+{
     IrcMessage msg;
-    std::istringstream iss(input);
+    std::string processedInput = input;
+
+    processedInput.erase(0, processedInput.find_first_not_of(" \t\r\n"));
+    processedInput.erase(processedInput.find_last_not_of(" \t\r\n") + 1);
+    std::istringstream iss(processedInput);
     std::string word;
-
-    // Extract prefix if present
-    if (!input.empty() && input[0] == ':') {
+    if (!processedInput.empty() && processedInput[0] == ':')
+	{
         iss >> word;
-        msg.prefix = word.substr(1); // Remove leading ':'
+        msg.prefix = word.substr(1);
     }
-
-    // Extract command
-    if (iss >> msg.command) {
-        // Extract parameters
-        while (iss >> word) {
-            if (word[0] == ':') { // Trailing parameter
-                std::string trailing;
-                getline(iss, trailing);
-                msg.params.push_back(word.substr(1) + trailing);
+    if (iss >> msg.command)
+	{
+        while (iss >> word)
+		{
+            if (word[0] == ':') 
+			{
+                std::string trailing = word.substr(1);
+                std::string temp;
+                if (getline(iss, temp)) {
+                    trailing += temp;
+                }
+                msg.params.push_back(trailing);
                 break;
             }
             msg.params.push_back(word);
         }
     }
-
     return msg;
 }

@@ -1,4 +1,6 @@
 #include "Parser.hpp"
+#include <regex>
+
 
 bool Parser::validateCommand(const std::string &cmd)
 {
@@ -15,6 +17,8 @@ bool Parser::validateCommand(const std::string &cmd)
         validCommands.insert("TOPIC");
         validCommands.insert("MODE");
         validCommands.insert("QUIT");
+        // Add CAP command
+        validCommands.insert("CAP");
     }
     if (cmd.length() == 3 && std::isdigit(cmd[0]) && std::isdigit(cmd[1]) && std::isdigit(cmd[2])) {
         return true;
@@ -26,7 +30,6 @@ bool Parser::validateCommand(const std::string &cmd)
 bool Parser::validateParameters(const std::string &cmd, const std::vector<std::string> &params)
 {
     std::string upperCmd = toUpper(cmd);
-
     if (upperCmd == "NICK") {
         return params.size() == 1 && !params[0].empty() && params[0].length() <= 9;
     }
@@ -34,7 +37,8 @@ bool Parser::validateParameters(const std::string &cmd, const std::vector<std::s
         return params.size() >= 4;
     }
     else if (upperCmd == "JOIN") {
-        return params.size() == 1 && !params[0].empty() && isValidChannel(params[0]);
+        // Allow empty JOIN parameters
+        return params.size() >= 1;
     }
     else if (upperCmd == "PRIVMSG" || upperCmd == "NOTICE") {
         if (params.size() < 2 || params[0].empty()) {
@@ -45,10 +49,11 @@ bool Parser::validateParameters(const std::string &cmd, const std::vector<std::s
     else if (upperCmd == "PING" || upperCmd == "PONG") {
         return params.size() >= 1;
     }
-
+    else if (upperCmd == "CAP") {
+        return true;
+    }
     return true;
 }
-
 std::string Parser::toUpper(const std::string &str)
 {
     std::string result = str;
@@ -56,43 +61,34 @@ std::string Parser::toUpper(const std::string &str)
     return result;
 }
 
+
 bool Parser::isValidChannel(const std::string &target)
 {
-    return !target.empty() && target[0] == '#';
+    std::regex channelPattern("^#.*$");
+    return std::regex_match(target, channelPattern);
 }
 
 bool Parser::isValidNickname(const std::string &target)
 {
-    if (target.empty()) {
-        return false;
-    }
-    for (size_t i = 0; i < target.size(); ++i) {
-        if (!std::isalnum(target[i])) {
-            return false;
-        }
-    }
-    return true;
+    std::regex nicknamePattern("^[a-zA-Z0-9]{1,9}$");
+    return std::regex_match(target, nicknamePattern);
 }
 
 void Parser::parse(const IrcMessage &msg)
 {
     try {
-        if (!validateCommand(msg.command)) {
+        	if (!validateCommand(msg.command)) {
             std::cerr << "Invalid IRC command: " << msg.command << std::endl;
             return;
         }
-
         if (!validateParameters(msg.command, msg.params)) {
             std::cerr << "Invalid parameters for command: " << msg.command << std::endl;
             return;
         }
-
         std::cout << "Command: " << msg.command << std::endl;
-
         if (!msg.prefix.empty()) {
             std::cout << "Prefix: " << msg.prefix << std::endl;
         }
-
         for (size_t i = 0; i < msg.params.size(); ++i) {
             std::cout << "Param " << i + 1 << ": " << msg.params[i] << std::endl;
         }
@@ -100,4 +96,3 @@ void Parser::parse(const IrcMessage &msg)
         std::cerr << "Parsing error: " << e.what() << std::endl;
     }
 }
-

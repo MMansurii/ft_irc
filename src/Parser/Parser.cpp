@@ -38,7 +38,7 @@ bool Parser::validateParameters(const std::string &cmd, const std::vector<std::s
     }
     else if (upperCmd == "JOIN") {
         // Allow empty JOIN parameters
-        return params.size() >= 1;
+        return params.size() >= 1 && isValidChannel(params[0]);
     }
     else if (upperCmd == "PRIVMSG" || upperCmd == "NOTICE") {
         if (params.size() < 2 || params[0].empty()) {

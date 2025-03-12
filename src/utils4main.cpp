@@ -1,8 +1,10 @@
 // Function: Utility functions for main.cpp
 
 #include "utils4main.hpp"
+
 // show error message
 void showError(int i, int ac,char **av) {
+    (void)ac;
     if (i == 1)
     std::cerr << "\033[31mError: Usage: " << av[0] << " <server> <port>\033[0m\n";
     else if (i == 2)
@@ -74,7 +76,7 @@ int checkport(std::string port) {
     return 1;
 }
  // check password
-check_password(std::string password) {
+int check_password(std::string password) {
     if (password.empty()) {
         std::cerr << "\033[31mError: Password must not be empty\033[0m\n";
         return 0;
@@ -87,7 +89,7 @@ check_password(std::string password) {
 }
 
 // Signal handler
-void chechSignal(int signum) {
+void checkSignal(int signum) {
     (void)signum;
     cont_run = 0;
 }

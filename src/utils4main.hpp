@@ -6,6 +6,8 @@
 #include <iostream>
 #include <string>
 
+extern int cont_run;
+
 void showError(int i, int ac, char **av);
 int checkport_digit(std::string port);
 int checkport_range(std::string port);
@@ -14,7 +16,7 @@ int checkport_length(std::string port);
 int checkport_leading_zeros(std::string port);
 int checkport(std::string port);
 int check_password(std::string password);
-void chechSignal(int signal);
+void checkSignal(int signal);
 
 void run_server(int argc, char **argv);
 void stop_server(); 

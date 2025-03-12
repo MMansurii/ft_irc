@@ -11,7 +11,7 @@
 # **************************************************************************** #
 
 NAME                = ircserv
-SRCS                = main.cpp src/Client/Client.cpp
+SRCS                = main.cpp src/utils4main.cpp
 CFLAGS              = -Wall -Werror -Wextra -std=c++11
 Include 			= -I src/
 OBJS                = $(SRCS:%.cpp=%.o)

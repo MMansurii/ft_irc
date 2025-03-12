@@ -18,7 +18,7 @@
 #include <string>
 #include <signal.h>
 
-extern int cont_run;
+int cont_run = 1;
 
 int main(int argc, char **argv) {
     if (argc != 3) {
@@ -30,9 +30,10 @@ int main(int argc, char **argv) {
     if (!check_password(argv[2]))
         return 1;
     try {
-        int cont_run = 1;
-        signal(SIGINT, chechSignal);
-        run_server(int argc, char **argv);
+        // int cont_run = 1;
+        (void)cont_run;
+        signal(SIGINT, checkSignal);
+        run_server(argc, argv);
     } 
     catch (std::exception &e) {
         stop_server();

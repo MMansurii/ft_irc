@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Main.cpp                                           :+:      :+:    :+:   */
+/*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/20 15:28:34 by mmansuri          #+#    #+#             */
-/*   Updated: 2025/02/20 19:52:04 by mmansuri         ###   ########.fr       */
+/*   Updated: 2025/03/11 17:23:43 by ftapponn         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Client.hpp"
+#include "src/Client/Client.hpp"
 
 int main(int argc, char **argv) {
     Client client;

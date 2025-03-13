@@ -43,6 +43,7 @@ void send_welcome_messages(int client_socket, const std::string& nickname) {
     send(client_socket, myinfo.c_str(), myinfo.length(), 0);
 }
 
+
 void handle_client(int client_socket) {
     std::string input;
     char buffer[1024];
@@ -54,10 +55,8 @@ void handle_client(int client_socket) {
             std::cerr << "Client disconnected.\n";
             break;
         }
-        
         input = std::string(buffer, bytes_read);
         std::cout << "Received: " << input << std::endl;
-        
         std::istringstream iss(input);
         std::string line;
         
@@ -71,27 +70,24 @@ void handle_client(int client_socket) {
             try {
                 IrcMessage msg = Lexer::tokenize(line);
                 
-                if (!Parser::validateCommand(msg.command)) {
-                    std::string err = ":irc.example.com 421 " + 
-                                     (client_state.nickname.empty() ? "*" : client_state.nickname) + 
-                                     " " + msg.command + " :Unknown command\r\n";
-                    send(client_socket, err.c_str(), err.length(), 0);
-                    continue;
-                }
-
-                if (!Parser::validateParameters(msg.command, msg.params)) {
-                    std::string err = ":irc.example.com 461 " + 
-                                     (client_state.nickname.empty() ? "*" : client_state.nickname) + 
-                                     " " + msg.command + " :Invalid parameters\r\n";
+                bool isOperator = 1; // Get actual operator status
+                ParseResult result = Parser::parse(msg, isOperator);
+                
+                if (!result.success) {
+                    std::string recipient = client_state.registered ? client_state.nickname : "*";
+                    
+                    size_t pos = result.errorMessage.find("* ");
+                    if (pos != std::string::npos) {
+                        result.errorMessage.replace(pos, 1, recipient);
+                    }
+                    std::string err = ":irc.example.com " + result.errorMessage + "\r\n";
                     send(client_socket, err.c_str(), err.length(), 0);
                     continue;
                 }
                 
-                Parser::parse(msg);
-                std::string upperCmd = Parser::toUpper(msg.command);
-				execute_command(client_socket, msg, client_state);
+                execute_command(client_socket, msg, client_state);
                 
-				if (!client_state.registered && 
+                if (!client_state.registered && 
                     !client_state.nickname.empty() && 
                     !client_state.username.empty()) {
                     client_state.registered = true;

@@ -18,6 +18,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+typedef struct sockaddr_in add_sock;
+
 class Client{
     private:
         // int[3] 0: password, 1: iswelcome, 2: file descriptor
@@ -32,15 +34,15 @@ class Client{
             std::string SendingMessage;
         }Cl_str_info;
 
-        struct add_sock *Cl_addr;
+        add_sock *Cl_addr;
 
     public:
         Client();
         ~Client();
         Client(int CL_int_info[3], struct add_sock *Cl_addr);
-        Client(Client const &src);
-        Client &operator=(Client const &src);
-
+        // Client(Client const &src);
+        // Client &operator=(Client const &src);
+        // getters and setters
         int getCl_int_info(int index);
         std::string getCl_str_info(std::string index);
         // struct add_sock *getCl_addr();
@@ -61,3 +63,10 @@ class Client{
 };
 
 #endif
+
+
+// struct sockaddr_storage {
+//     sa_family_t ss_family;  // Address family (AF_INET or AF_INET6)
+//     char __ss_padding[128 - sizeof(sa_family_t)]; // Padding for alignment
+//     unsigned long __ss_align;  // Alignment
+// };

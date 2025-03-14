@@ -75,6 +75,7 @@ bool Parser::validateUserAuthentificationParameters(const std::string &cmd, cons
         return params.size() == 1 && isValidNickname(params[0]);
     else if (cmd == "USER") 
         return params.size() >= 4 && isValidNickname(params[0]);
+	return false;
 }
 bool Parser::validateUserParameters(const std::string &cmd, const std::vector<std::string> &params)
 {

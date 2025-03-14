@@ -6,7 +6,7 @@
 #    By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/27 18:45:45 by mmansuri          #+#    #+#              #
-#    Updated: 2025/03/12 18:56:34 by ftapponn         ###   ########.fr        #
+#    Updated: 2025/03/14 16:35:31 by ftapponn         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -38,3 +38,4 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
+

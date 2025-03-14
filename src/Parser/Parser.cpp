@@ -127,7 +127,6 @@ ParseResult Parser::parse(const IrcMessage &msg, const ClientState &clientState)
                 "421 * " + msg.command + " :Unknown command"
             );
         }
-        
         if (!validateParameters(msg.command, msg.params, clientState)) 
         {
             std::string errorMsg;
@@ -143,13 +142,11 @@ ParseResult Parser::parse(const IrcMessage &msg, const ClientState &clientState)
                 errorMsg
             );
         }
-        
         std::cout << "Command: " << msg.command << std::endl;
         if (!msg.prefix.empty())
             std::cout << "Prefix: " << msg.prefix << std::endl;
         for (size_t i = 0; i < msg.params.size(); ++i)
             std::cout << "Param " << i + 1 << ": " << msg.params[i] << std::endl;
-        
         return ParseResult::Success();
     } 
     catch (const std::exception &e) 

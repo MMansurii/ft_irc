@@ -1,4 +1,5 @@
 #include "Parser.hpp"
+
 #include <regex>
 
 std::string Parser::toUpper(const std::string &str)
@@ -32,40 +33,28 @@ bool Parser::validateCommand(const std::string &cmd)
     return validCommands.count(upperCmd) > 0;
 }
 
-bool Parser::validateParameters(const std::string &cmd, const std::vector<std::string> &params, bool isOperator)
+bool Parser::validateParameters(const std::string &cmd, const std::vector<std::string> &params, const ClientState &clientState)
 {
-	std::string upperCmd = toUpper(cmd);
-
-	bool isAuthentified = true;
-	if (validateUserAuthentificationParameters(upperCmd, params))
-		return true;
-	if (validateUserParameters(upperCmd, params)) 
+    if (validateUserAuthentificationParameters(cmd, params))
+        return true;
+    if (!clientState.isRegistered()) 
 	{
-		if(!isAuthentified)
-		{
-			std::cerr << "You have to register" << std::endl; 
-			return false;
-		}
-		return true;
-	}
-	if (validateOperatorParameters(upperCmd, params)) 
+        std::cerr << "You must be registered to use this command" << std::endl;
+        return false;
+    }
+    if (validateUserParameters(cmd, params)) 
+        return true;
+    if (validateOperatorParameters(cmd, params)) 
 	{
-		if(!isOperator)
-		{
-			std::cerr << "You are not have operator privilege" << std::endl; 
-			return false;
-		}
-		if(!isAuthentified)
-		{
-			std::cerr << "You have to register" << std::endl; 
-			return false;
-		}
-		return true;
-	}
+        if(!clientState.isOperator()) {
+            std::cerr << "You do not have operator privileges" << std::endl; 
+            return false;
+        }
+        return true;
+    }
 
-	return false;
+    return false;
 }
-
 
 bool Parser::validateUserAuthentificationParameters(const std::string &cmd, const std::vector<std::string> &params)
 {
@@ -126,33 +115,44 @@ bool Parser::isValidNickname(const std::string &target)
     return std::regex_match(target, nicknamePattern);
 }
 
-ParseResult Parser::parse(const IrcMessage &msg, bool isOperator)
+ParseResult Parser::parse(const IrcMessage &msg, const ClientState &clientState)
 {
     try 
-	{
+    {
         if (!validateCommand(msg.command)) 
-		{
+        {
             return ParseResult::Error(
                 ParseErrorType::INVALID_COMMAND,
                 "421 * " + msg.command + " :Unknown command"
             );
         }
-        if (!validateParameters(msg.command, msg.params, isOperator)) 
-		{
+        
+        if (!validateParameters(msg.command, msg.params, clientState)) 
+        {
+            std::string errorMsg;
+            if (!clientState.isRegistered() && !validateUserAuthentificationParameters(toUpper(msg.command), msg.params))
+                errorMsg = "451 * " + msg.command + " :You must register first";
+            else if (!clientState.isOperator() && validateOperatorParameters(toUpper(msg.command), msg.params))
+                errorMsg = "481 * " + msg.command + " :Permission Denied - You're not an IRC operator";
+            else
+                errorMsg = "461 * " + msg.command + " :Invalid parameters";
+                
             return ParseResult::Error(
                 ParseErrorType::INVALID_PARAMETERS,
-                "461 * " + msg.command + " :Invalid parameters"
+                errorMsg
             );
         }
+        
         std::cout << "Command: " << msg.command << std::endl;
         if (!msg.prefix.empty())
             std::cout << "Prefix: " << msg.prefix << std::endl;
         for (size_t i = 0; i < msg.params.size(); ++i)
             std::cout << "Param " << i + 1 << ": " << msg.params[i] << std::endl;
+        
         return ParseResult::Success();
     } 
-	catch (const std::exception &e) 
-	{
+    catch (const std::exception &e) 
+    {
         std::cerr << "Parsing error: " << e.what() << std::endl;
         return ParseResult::Error(
             ParseErrorType::PARSING_ERROR,

@@ -8,6 +8,7 @@
 #include "../Lexer/Lexer.hpp"
 #include <set>
 #include <regex>
+#include "../command/ClientState.hpp"
 
 enum class ParseErrorType {
     NONE,
@@ -36,25 +37,18 @@ struct ParseResult {
     }
 };
 
-class Parser 
+class Parser
 {
 public:
-
-    static bool validateCommand(const std::string &cmd);
-	static bool validateParameters(const std::string &cmd, const std::vector<std::string> &params, bool isOperator);
-    static ParseResult parse(const IrcMessage &msg, bool isOperator);
-	static std::string toUpper(const std::string &str);
-
+    static ParseResult parse(const IrcMessage &msg, const ClientState &clientState);
+    static std::string toUpper(const std::string &str);
 private:
-	static bool validateUserParameters(const std::string &cmd, const std::vector<std::string> &params);
-	static bool validateOperatorParameters(const std::string &cmd, const std::vector<std::string> &params);
-	static bool isValidChannel(const std::string &target);
-	static bool isValidNickname(const std::string &target);
-	static bool validateNicknameLength(const std::string &nickname);
-	static bool isValidChannelFormat(const std::string &channel);
-	static bool isValidNickFormat(const std::string &nickname);
-	static void printError(const std::string &msg);
-	static void printParameterError(const std::string &cmd, const std::vector<std::string> &params);
+    static bool validateCommand(const std::string &cmd);
+	static bool validateParameters(const std::string &cmd, const std::vector<std::string> &params, const ClientState &clientState);
+    static bool validateUserAuthentificationParameters(const std::string &cmd, const std::vector<std::string> &params);
+    static bool validateUserParameters(const std::string &cmd, const std::vector<std::string> &params);
+    static bool validateOperatorParameters(const std::string &cmd, const std::vector<std::string> &params);
+    static bool isValidChannel(const std::string &target);
+    static bool isValidNickname(const std::string &target);
 };
-
 #endif

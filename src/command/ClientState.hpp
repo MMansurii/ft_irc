@@ -25,4 +25,4 @@ struct ClientState {
         return !nickname.empty() && !username.empty() && passwordProvided && !registered;
     }
 };
-#endif // CLIENT_STATE_HPP
+#endif 

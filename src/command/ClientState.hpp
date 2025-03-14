@@ -8,19 +8,20 @@ struct ClientState {
     std::string username;
     std::string realname;
     bool registered = false;
-    bool passwordProvided = false;
+    bool passwordProvided = true;
     bool operatorStatus = false;
     std::vector<std::string> channels;
     
-    bool isRegistered() const {
+    bool isRegistered() const 
+	{
         return registered;
     }
-    
-    bool isOperator() const {
+    bool isOperator() const 
+	{
         return operatorStatus;
     }
-    
-    bool canCompleteRegistration() const {
+    bool canCompleteRegistration() const 
+	{
         return !nickname.empty() && !username.empty() && passwordProvided && !registered;
     }
 };

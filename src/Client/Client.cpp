@@ -1,14 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Client.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/11/20 15:28:34 by mmansuri          #+#    #+#             */
-/*   Updated: 2025/02/20 19:52:04 by mmansuri         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
 
 #include "Client.hpp"
 #include <iostream>
@@ -23,7 +12,7 @@ Client::~Client(){
 
 };
 
-viod Client::setHostname(){
+void Client::setHostname(){
     int sucseed1;
     char arrayhost[1025];
     struct sockaddr_in *addr = reinterpret_cast<struct sockaddr_in *>(Cl_addr);
@@ -129,7 +118,8 @@ void Client::do_TMess(std::string Mymessage, int Type)
     if (Type == 1)
         {
             // need more works on this
-            this->Cl_int_info[1] = 1;
+            Client::setCl_int_info(1, 1);
+            // this->Cl_int_info[1] = 1;
             std::string msg1 = getCl_str_info(1) + " you are welcome to " + getCl_str_info(4) + ", your user name: @" + getCl_str_info(0) + ", host name:" + getCl_str_info(2);
             Client::do_TMess(msg1, 2);
             std::string msg2 =  getCl_str_info(1) + ", your host name is " + getCl_str_info(4) + ". Server created " + Mymessage;

@@ -46,6 +46,7 @@ public:
 	static std::string toUpper(const std::string &str);
 
 private:
+	static bool validateUserAuthentificationParameters(const std::string &cmd, const std::vector<std::string> &params);
 	static bool validateUserParameters(const std::string &cmd, const std::vector<std::string> &params);
 	static bool validateOperatorParameters(const std::string &cmd, const std::vector<std::string> &params);
 	static bool isValidChannel(const std::string &target);

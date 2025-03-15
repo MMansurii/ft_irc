@@ -103,6 +103,7 @@ bool Parser::validateOperatorParameters(const std::string &cmd, const std::vecto
     return false;
 }
 
+
 bool Parser::isValidChannel(const std::string &target)
 {
     std::regex channelPattern("^#[^ \x07\r\n\\0]{1,49}$");

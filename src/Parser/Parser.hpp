@@ -5,6 +5,8 @@
 #include <cctype>
 #include <iostream>
 #include <stdexcept>
+#include <unordered_map>
+#include <functional>
 #include "../Lexer/Lexer.hpp"
 #include <set>
 #include <regex>
@@ -45,7 +47,7 @@ public:
 private:
     static bool validateCommand(const std::string &cmd);
 	static bool validateParameters(const std::string &cmd, const std::vector<std::string> &params, const ClientState &clientState);
-    static bool validateUserAuthentificationParameters(const std::string &cmd, const std::vector<std::string> &params);
+	static bool validateUserAuthentificationParameters(const std::string &cmd, const std::vector<std::string> &params);
     static bool validateUserParameters(const std::string &cmd, const std::vector<std::string> &params);
     static bool validateOperatorParameters(const std::string &cmd, const std::vector<std::string> &params);
     static bool isValidChannel(const std::string &target);

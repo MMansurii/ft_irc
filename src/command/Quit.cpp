@@ -4,6 +4,8 @@
 
 void handle_quit_command(int client_socket, const std::vector<std::string>& params, ClientState& client_state) 
 {
+	(void)client_state;
+	(void)params;
     std::cout << "Client requested to quit." << std::endl;
     close(client_socket);
 }

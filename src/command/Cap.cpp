@@ -4,6 +4,8 @@
 
 void handle_cap_command(int client_socket, const std::vector<std::string>& params, ClientState& client_state) 
 {
+	(void)params;
+	(void)client_state;
     if (params.size() >= 1)
 	{
         if (params[0] == "LS")

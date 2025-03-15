@@ -1,14 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Client.hpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/11/20 15:28:34 by mmansuri          #+#    #+#             */
-/*   Updated: 2025/02/20 19:52:04 by mmansuri         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #ifndef client_HPP
 #define client_HPP
@@ -44,11 +34,12 @@ class Client{
         // Client &operator=(Client const &src);
         // getters and setters
         int getCl_int_info(int index);
-        std::string getCl_str_info(std::string index);
+        std::string getCl_str_info(int index);
         // struct add_sock *getCl_addr();
         void setCl_int_info(int index, int value);
-        void setCl_str_info(std::string index, std::string value);
+        void setCl_str_info(int index, std::string value);
         // void setCl_addr(struct add_sock *Cl_addr);
+        void setHostname();
 
         // Doing some activities on a message in one function
         // Welcome message-> Type 1
@@ -57,7 +48,6 @@ class Client{
 
         // Doing some activities in one function
         // clear-> Type 1
-
         void do_NoMess(int Type);
        
 };

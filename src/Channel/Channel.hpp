@@ -44,9 +44,10 @@ class Channel
 		Channel& operator=(Channel const &src);
 
     public:
-        Channel(const std::string& name, const std::string& key, Client* client);
+        Channel(const std::string &name, const std::string &key, Client *client);
         ~Channel();
         std::string getChannelDetail(ChannelDetailType type) const;
+        void setChannelInfo(ChannelDetailType detailType, const std::string &value, int intValue);
 };
 
 

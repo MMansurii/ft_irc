@@ -48,6 +48,7 @@ class Channel
         ~Channel();
         std::string getChannelDetail(ChannelDetailType type) const;
         void setChannelInfo(ChannelDetailType detailType, const std::string &value, int intValue);
+        Client *findOperatorByNickname(const std::string &nickname);
 };
 
 

@@ -29,9 +29,6 @@ struct ChannelInfo {
     std::string topicSetter;      
     std::string creationTimestamp; 
 
-    // Constructor to initialize default values
-    ChannelInfo()
-        : keyRequired(0), inviteOnly(0), topicRestricted(0), maxClients(0), currentClientCount(0) {}
 };
 
 

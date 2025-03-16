@@ -55,7 +55,7 @@ void Channel::setChannelInfo(ChannelDetailType detailType, const std::string& va
             info.maxClients = intValue;
             break;
         case CURRENT_CLIENT_COUNT:
-            info.currentClientCount = intValue;
+            info.currentClientCount += intValue;
             break;
         case TOPIC_TIME:
             info.lastTopicChangeTime = value;

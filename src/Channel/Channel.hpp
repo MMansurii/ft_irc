@@ -4,6 +4,18 @@
 #include <list>
 #include "Client.hpp"
 
+enum ChannelDetailType {
+    CHANNEL_NAME,
+    CHANNEL_TOPIC,
+    TOPIC_MODE,
+    MAX_CLIENTS,
+    CURRENT_CLIENT_COUNT,
+    TOPIC_TIME,
+    TOPIC_SETTER,
+    CREATION_DATE,
+    
+};
+
 struct ChannelInfo {
     std::string channelName;      
     std::string channelTopic;     
@@ -30,9 +42,14 @@ class Channel
         std::list<Client*> clientsInChannel;        // Set of clients in the channel
         std::list<Client*> operatorsInChannel;    // Set of operators in the channel
         std::list<Client*> invitedClients;          // Set of invited clients in the channel
+        Channel();
+		Channel(Channel const &src);
+		Channel& operator=(Channel const &src);
 
     public:
         Channel(const std::string& name, const std::string& key, Client* client);
+        ~Channel();
+        std::string getChannelDetail(ChannelDetailType type) const;
 };
 
 

@@ -23,7 +23,8 @@ extern ClientState client_state;
 
 ClientState client_state;
 
-void send_welcome_messages(int client_socket, const std::string& nickname) {
+void send_welcome_messages(int client_socket, const std::string& nickname) 
+{
     std::string server_name = "irc.example.com";
     
     std::string welcome = ":" + server_name + " 001 " + nickname + " :Welcome to the IRC Network " + 
@@ -109,22 +110,25 @@ int main()
 {
     int server_fd, client_socket;
     struct sockaddr_in server_addr, client_addr;
+
     socklen_t client_len = sizeof(client_addr);
-    
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == -1) {
+    if (server_fd == -1) 
+	{
         std::cerr << "Failed to create socket.\n";
         return -1;
     }
     int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+	{
         std::cerr << "Failed to set socket options.\n";
         return -1;
     }
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
-    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) 
+	{
         std::cerr << "Failed to bind socket.\n";
         return -1;
     }
@@ -133,7 +137,8 @@ int main()
         return -1;
     }
     std::cout << "Server is listening on port " << PORT << "...\n";
-    while (true) {
+    while (true)
+	{
         client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
         if (client_socket < 0) {
             std::cerr << "Failed to accept client connection.\n";

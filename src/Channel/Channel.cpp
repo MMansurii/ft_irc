@@ -72,9 +72,18 @@ void Channel::setChannelInfo(ChannelDetailType detailType, const std::string& va
 }
 
 Client *Channel::findOperatorByNickname(const std::string &nickname) {
-    for (auto& op : operatorsInChannel) {
+    for (auto &op : operatorsInChannel) {
         if (op->getCl_str_info(1) == nickname) {
             return op;
+        }
+    }
+    return nullptr; // Return nullptr if not found
+}
+
+Client *Channel::findClientByNickname(const std::string &nickname) {
+    for (auto &client : clientsInChannel) {
+        if (client->getCl_str_info(1) == nickname) {
+            return client;
         }
     }
     return nullptr; // Return nullptr if not found

@@ -52,6 +52,7 @@ class Channel
         Client *findClientByNickname(const std::string &nickname);
 
         int isUserInChannel(const std::string& nickname);
+        int isOperatorInChannel(const std::string &nickname);
 
 };      
 

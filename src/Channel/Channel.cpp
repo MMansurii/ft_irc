@@ -97,3 +97,12 @@ int Channel::isUserInChannel(const std::string &nickname) {
     }
     return 0; // User not found
 }
+
+int Channel::isOperatorInChannel(const std::string &nickname) {
+    for (auto& operatorUser : operatorsInChannel) {
+        if (operatorUser->getCl_str_info(1) == nickname) {
+            return 1; // Operator found
+        }
+    }
+    return 0; // Operator not found
+}

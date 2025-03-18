@@ -36,24 +36,26 @@ bool Parser::validateCommand(const std::string &cmd)
 bool Parser::validateParameters(const std::string &cmd, const std::vector<std::string> &params, const ClientState &clientState)
 {
     std::string upperCmd = toUpper(cmd);
+    
     if (validateUserAuthentificationParameters(upperCmd, params))
         return true;
+        
     if (!clientState.isRegistered()) 
-	{
+    {
         std::cerr << "You must be registered to use this command" << std::endl;
         return false;
     }
+    
     if (validateUserParameters(upperCmd, params)) 
         return true;
     if (validateOperatorParameters(upperCmd, params)) 
-	{
+    {
         if(!clientState.isOperator()) {
             std::cerr << "You do not have operator privileges" << std::endl; 
             return false;
         }
         return true;
     }
-
     return false;
 }
 

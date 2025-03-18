@@ -88,11 +88,6 @@ int check_password(std::string password) {
     return 1;
 }
 
-// Signal handler
-void checkSignal(int signum) {
-    (void)signum;
-    cont_run = 0;
-}
 
 void run_server(int argc, char **argv) {
     (void)argc;

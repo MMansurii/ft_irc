@@ -7,15 +7,24 @@ struct ClientState {
     std::string nickname;
     std::string username;
     std::string realname;
-    bool registered = false;
-    bool passwordProvided = true;
-    bool operatorStatus = false;
+    bool passwordProvided;
+    bool registered;
+    bool operatorStatus;
     std::vector<std::string> channels;
     
+	ClientState() : passwordProvided(false), registered(false), operatorStatus(false){}
+    
+	static ClientState& getInstance() 
+	{
+        static ClientState instance;
+        return instance;
+    }
+
     bool isRegistered() const 
 	{
         return registered;
     }
+
     bool isOperator() const 
 	{
         return operatorStatus;

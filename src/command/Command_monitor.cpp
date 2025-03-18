@@ -9,6 +9,7 @@ std::map<std::string, CommandHandler> command_handlers;
 
 void initialize_command_handlers() {
     command_handlers["CAP"] = handle_cap_command;
+    command_handlers["PASS"] = handle_pass_command;
     command_handlers["NICK"] = handle_nick_command;
     command_handlers["USER"] = handle_user_command;
     command_handlers["JOIN"] = handle_join_command;

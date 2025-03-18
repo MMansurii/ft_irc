@@ -80,11 +80,20 @@ Client *Channel::findOperatorByNickname(const std::string &nickname) {
     return nullptr; // Return nullptr if not found
 }
 
-// Client *Channel::findClientByNickname(const std::string &nickname) {
-//     for (auto &client : clientsInChannel) {
-//         if (client->getCl_str_info(1) == nickname) {
-//             return client;
-//         }
-//     }
-//     return nullptr; // Return nullptr if not found
-// }
+Client *Channel::findClientByNickname(const std::string &nickname) {
+    for (auto &client : clientsInChannel) {
+        if (client->getCl_str_info(1) == nickname) {
+            return client;
+        }
+    }
+    return nullptr; // Return nullptr if not found
+}
+
+int Channel::isUserInChannel(const std::string &nickname) {
+    for (auto &client : clientsInChannel) {
+        if (client->getCl_str_info(1) == nickname) {
+            return 1; // User found
+        }
+    }
+    return 0; // User not found
+}

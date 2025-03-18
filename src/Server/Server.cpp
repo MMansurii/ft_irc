@@ -82,6 +82,7 @@ void Server::send_welcome_messages(int client_socket, const std::string& nicknam
     send(client_socket, myinfo.c_str(), myinfo.length(), 0);
 }
 
+
 void Server::handle_client(int client_socket) 
 {
     ClientState& client_state = ClientState::getInstance();
@@ -89,11 +90,11 @@ void Server::handle_client(int client_socket)
     char buffer[1024];
 
     while (running) 
-	{
+    {
         memset(buffer, 0, sizeof(buffer));
         int bytes_read = read(client_socket, buffer, sizeof(buffer));
         if (bytes_read <= 0)
-		{
+        {
             std::cerr << "Client disconnected.\n";
             break;
         }
@@ -103,9 +104,9 @@ void Server::handle_client(int client_socket)
         std::string line;
 
         while (std::getline(iss, line, '\n')) 
-		{
+        {
             if (!line.empty() && line.back() == '\r') 
-			{
+            {
                 line.pop_back();
             }
 
@@ -113,8 +114,8 @@ void Server::handle_client(int client_socket)
 
             try {
                 IrcMessage msg = Lexer::tokenize(line);
+                
                 ParseResult result = Parser::parse(msg, client_state);
-
                 if (!result.success) {
                     std::string recipient = client_state.isRegistered() ? client_state.nickname : "*";
                     size_t pos = result.errorMessage.find("* ");
@@ -123,6 +124,7 @@ void Server::handle_client(int client_socket)
                     }
                     std::string err = ":irc.example.com " + result.errorMessage + "\r\n";
                     send(client_socket, err.c_str(), err.length(), 0);
+                    std::cout << "Sent error: " << err;
                     continue;
                 }
                 execute_command(client_socket, msg, client_state);
@@ -130,7 +132,7 @@ void Server::handle_client(int client_socket)
                     !client_state.nickname.empty() &&
                     !client_state.username.empty() &&
                     client_state.passwordProvided) 
-				{
+                {
                     client_state.registered = true;
                     send_welcome_messages(client_socket, client_state.nickname);
                 }
@@ -142,7 +144,6 @@ void Server::handle_client(int client_socket)
             }
         }
     }
-
     close(client_socket);
 }
 

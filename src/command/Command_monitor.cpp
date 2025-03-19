@@ -15,6 +15,7 @@ void initialize_command_handlers() {
     command_handlers["JOIN"] = handle_join_command;
     command_handlers["PING"] = handle_ping_command;
     command_handlers["QUIT"] = handle_quit_command;
+    command_handlers["PRIVMSG"] = handle_privmsg_command;
 }
 
 void execute_command(int client_socket, IrcMessage& msg, ClientState& client_state) {

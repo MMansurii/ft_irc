@@ -6,7 +6,7 @@
 #    By: mmansuri <mmansuri@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/05/27 18:45:45 by mmansuri          #+#    #+#              #
-#    Updated: 2025/03/17 18:51:40 by ftapponn         ###   ########.fr        #
+#    Updated: 2025/03/19 16:26:27 by ftapponn         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 GREEN = \033[0;32m
@@ -61,7 +61,7 @@ $(NAME): $(OBJS)
 	@$(CC) $(CFLAGS) $(OBJS) $(INCLUDE) -o $(NAME)
 	@echo "$(GREEN)✓ Created executable: $(WHITE)$(NAME)$(RESET)"
 
-SRC_lexer           = maintest.cpp src/utils4main.cpp src/Server/Server.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp src/command/Command_monitor.cpp src/command/Join.cpp src/command/Nick.cpp src/command/Ping.cpp src/command/Quit.cpp src/command/User.cpp src/command/Cap.cpp  src/command/Pass.cpp
+SRC_lexer           = maintest.cpp src/utils4main.cpp src/Server/Server.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp src/command/Command_monitor.cpp src/command/Join.cpp src/command/Nick.cpp src/command/Ping.cpp src/command/Quit.cpp src/command/User.cpp src/command/Cap.cpp  src/command/Pass.cpp src/command/Privmsg.cpp
 OBJS_lexer          = $(SRC_lexer:.cpp=.o)
 INCLUDE_lexer       = -I src/
 

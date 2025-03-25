@@ -227,3 +227,20 @@ std::string Channel::attemptJoinChannel(const std::string &providedKey, Client *
         return ("475 " + client->getCl_str_info(1) + ' ' + info.channelName + " :Cannot join channel (+k)");
     }
 }
+
+std::string Channel::getChannelModes() const
+{
+    std::string modeString = "+";
+
+    if (info.inviteOnly) modeString += "i";
+    if (info.topicRestricted) modeString += "t";
+    if (info.keyRequired) modeString += "k";
+
+    if (info.maxClients > 0)
+    {
+        modeString += "l " + std::to_string(info.maxClients);
+    }
+
+    return (modeString == "+") ? "" : modeString;
+}
+

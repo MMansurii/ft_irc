@@ -60,6 +60,8 @@ class Channel
         void sendUserListToClient(Client *client);
         std::string attemptJoinChannel(const std::string& providedKey, Client *client);
         void removeInvitedUser(const std::string& userNickname);
+        std::string getChannelModes() const;
+
 
 };      
 

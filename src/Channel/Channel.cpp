@@ -40,7 +40,7 @@ std::string Channel::getChannelDetail(ChannelDetailType type) const
     //     return info.accessKey;
 
     default:
-        return "Unknown"; // Default case if the type is unknown
+        return "Unknown";
     }
 }
 
@@ -88,7 +88,7 @@ Client *Channel::findOperatorByNickname(const std::string &nickname)
             return op;
         }
     }
-    return nullptr; // Return nullptr if not found
+    return nullptr;
 }
 
 Client *Channel::findClientByNickname(const std::string &nickname)
@@ -100,7 +100,7 @@ Client *Channel::findClientByNickname(const std::string &nickname)
             return client;
         }
     }
-    return nullptr; // Return nullptr if not found
+    return nullptr;
 }
 
 int Channel::isUserInChannel(const std::string &nickname)
@@ -109,10 +109,10 @@ int Channel::isUserInChannel(const std::string &nickname)
     {
         if (client->getCl_str_info(1) == nickname)
         {
-            return 1; // User found
+            return 1;
         }
     }
-    return 0; // User not found
+    return 0;
 }
 
 int Channel::isOperatorInChannel(const std::string &nickname)
@@ -121,10 +121,10 @@ int Channel::isOperatorInChannel(const std::string &nickname)
     {
         if (operatorUser->getCl_str_info(1) == nickname)
         {
-            return 1; // Operator found
+            return 1;
         }
     }
-    return 0; // Operator not found
+    return 0;
 }
 
 int Channel::foundInvited(const std::string &nickname)
@@ -133,10 +133,10 @@ int Channel::foundInvited(const std::string &nickname)
     {
         if (invitedUser->getCl_str_info(1) == nickname)
         {
-            return 1; // User found in invited list
+            return 1;
         }
     }
-    return 0; // User not found in invited list
+    return 0;
 }
 
 void Channel::addInvitedGuest(Client *newGuest)
@@ -149,36 +149,33 @@ void Channel::sendUserListToClient(Client *client)
     // Reply Code 353 (USER_LIST_REPLY): Server sends a list of users in the channel
     std::string userListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + this->getChannelDetail(CHANNEL_NAME) + " :";
 
-    // Add channel operators with '@' prefix
     bool isFirstOperator = true;
     for (auto &operatorUser : this->operatorsInChannel)
     {
         if (!isFirstOperator)
         {
-            userListMessage += ' '; // Add a space between nicknames
+            userListMessage += ' ';
         }
         userListMessage += '@' + operatorUser->getCl_str_info(1); // Prefix operator nicknames with '@'
         isFirstOperator = false;
     }
 
-    // Add regular users
     bool isFirstUser = true;
     for (auto &regularUser : this->clientsInChannel)
     {
         if (!isFirstUser)
         {
-            userListMessage += ' '; // Add a space between nicknames
+            userListMessage += ' ';
         }
-        userListMessage += regularUser->getCl_str_info(1); // Add regular user nicknames
+        userListMessage += regularUser->getCl_str_info(1); 
         isFirstUser = false;
     }
 
-    // Send the list of users to the requesting client using do_TMess with Type 1 (or Type 2 based on your needs)
-    client->do_TMess(userListMessage, 1); // Type 1 (or use Type 2 if you need raw socket-based sending)
+    client->do_TMess(userListMessage, 2); 
 
     // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the user list
     std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
-    client->do_TMess(endOfListMessage, 1); // Type 1 (or Type 2 as needed)
+    client->do_TMess(endOfListMessage, 2); 
 }
 
 void Channel::removeInvitedUser(const std::string& userNickname)

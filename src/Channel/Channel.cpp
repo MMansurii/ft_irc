@@ -116,3 +116,37 @@ int Channel::foundInvited(const std::string &nickname) {
     return 0; // User not found in invited list
 }
 
+void Channel::sendUserListToClient(Client *client)
+{
+    // Reply Code 353 (USER_LIST_REPLY): Server sends a list of users in the channel
+    std::string userListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + this->getChannelDetail(CHANNEL_NAME) + " :";
+
+    // Add channel operators with '@' prefix
+    bool isFirstOperator = true;
+    for (auto& operatorUser : this->operatorsInChannel) {
+        if (!isFirstOperator) {
+            userListMessage += ' ';  // Add a space between nicknames
+        }
+        userListMessage += '@' + operatorUser->getCl_str_info(1);  // Prefix operator nicknames with '@'
+        isFirstOperator = false;
+    }
+
+    // Add regular users
+    bool isFirstUser = true;
+    for (auto& regularUser : this->clientsInChannel) {
+        if (!isFirstUser) {
+            userListMessage += ' ';  // Add a space between nicknames
+        }
+        userListMessage += regularUser->getCl_str_info(1);  // Add regular user nicknames
+        isFirstUser = false;
+    }
+
+    // Send the list of users to the requesting client using do_TMess with Type 1 (or Type 2 based on your needs)
+    client->do_TMess(userListMessage, 1);  // Type 1 (or use Type 2 if you need raw socket-based sending)
+
+    // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the user list
+    std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
+    client->do_TMess(endOfListMessage, 1);  // Type 1 (or Type 2 as needed)
+}
+
+

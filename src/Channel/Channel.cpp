@@ -116,6 +116,11 @@ int Channel::foundInvited(const std::string &nickname) {
     return 0; // User not found in invited list
 }
 
+void Channel::addInvitedGuest(Client *newGuest)
+{
+    this->invitedClients.push_back(newGuest);
+}
+
 void Channel::sendUserListToClient(Client *client)
 {
     // Reply Code 353 (USER_LIST_REPLY): Server sends a list of users in the channel

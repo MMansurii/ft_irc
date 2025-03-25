@@ -54,6 +54,8 @@ class Channel
         int isUserInChannel(const std::string& nickname);
         int isOperatorInChannel(const std::string &nickname);
         int foundInvited(const std::string &nickname);
+
+        void addInvitedGuest(Client *newGuest);
         void sendUserListToClient(Client *client);
 
 };      

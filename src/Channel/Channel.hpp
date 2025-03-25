@@ -13,6 +13,7 @@ enum ChannelDetailType {
     TOPIC_TIME,
     TOPIC_SETTER,
     CREATION_DATE,
+    ACCESS_KEY,
     
 };
 
@@ -57,6 +58,8 @@ class Channel
 
         void addInvitedGuest(Client *newGuest);
         void sendUserListToClient(Client *client);
+        std::string attemptJoinChannel(const std::string& providedKey, Client *client);
+        void removeInvitedUser(const std::string& userNickname);
 
 };      
 

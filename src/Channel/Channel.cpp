@@ -106,3 +106,13 @@ int Channel::isOperatorInChannel(const std::string &nickname) {
     }
     return 0; // Operator not found
 }
+
+int Channel::foundInvited(const std::string &nickname) {
+    for (auto& invitedUser : this->invitedClients) {
+        if (invitedUser->getCl_str_info(1) == nickname) {
+            return 1; // User found in invited list
+        }
+    }
+    return 0; // User not found in invited list
+}
+

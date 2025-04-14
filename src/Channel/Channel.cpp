@@ -291,3 +291,26 @@ void Channel::broadcastMessage(Client *sender, const std::string &message)
     }
 }
 
+std::string Channel::getChannelModes() const
+{
+    std::ostringstream oss;
+    std::string flags;
+
+    if (info.inviteOnly == 1)
+        flags += 'i';
+    if (info.topicRestricted == 1)
+        flags += 't';
+    if (info.keyRequired == 1)
+        flags += 'k';
+    if (info.maxClients != 0)
+    {
+        flags += 'l';
+        oss << " " << info.maxClients;
+    }
+
+    if (flags.empty())
+        return "";
+
+    return "+" + flags + oss.str();
+}
+

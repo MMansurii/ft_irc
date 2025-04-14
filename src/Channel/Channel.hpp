@@ -3,6 +3,8 @@
 #include <iostream>
 #include <list>
 #include "Client.hpp"
+#include <sstream>
+
 
 enum ChannelDetailType {
     CHANNEL_NAME,
@@ -63,6 +65,7 @@ class Channel
         void removeClientsInChannel(const std::string& clientNickname);
         void removeOperatorsInChannel(const std::string& clientNickname);
 
+        std::string getChannelModes() const;
         std::string getChannelModes() const;
         void broadcastMessage(Client *sender, const std::string &message);
 

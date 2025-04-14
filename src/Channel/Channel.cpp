@@ -127,7 +127,7 @@ int Channel::isOperatorInChannel(const std::string &nickname)
     return 0;
 }
 
-int Channel::foundInvited(const std::string &nickname)
+int Channel::isClientInvited(const std::string &nickname)
 {
     for (auto &invitedUser : this->invitedClients)
     {
@@ -178,11 +178,11 @@ void Channel::sendUserListToClient(Client *client)
     client->do_TMess(endOfListMessage, 2); 
 }
 
-void Channel::removeInvitedUser(const std::string& userNickname)
+void Channel::removeInvitedClient(const std::string& clientNickname)
 {
     for (auto iterator = this->invitedClients.begin(); iterator != this->invitedClients.end(); )
     {
-        if ((*iterator)->getCl_str_info(1) == userNickname)
+        if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
             iterator = this->invitedClients.erase(iterator);
             break; 
@@ -194,12 +194,44 @@ void Channel::removeInvitedUser(const std::string& userNickname)
     }
 }
 
+void Channel::removeClientsInChannel(const std::string& clientNickname)
+{
+    for (auto iterator = this->clientsInChannel.begin(); iterator != this->clientsInChannel.end(); )
+    {
+        if ((*iterator)->getCl_str_info(1) == clientNickname)
+        {
+            iterator = this->clientsInChannel.erase(iterator);
+            break; 
+        }
+        else
+        {
+            ++iterator;
+        }
+    }
+}
 
-std::string Channel::attemptJoinChannel(const std::string &providedKey, Client *client)
+void Channel::removeOperatorsInChannel(const std::string& clientNickname)
+{
+    for (auto iterator = this->operatorsInChannel.begin(); iterator != this->operatorsInChannel.end(); )
+    {
+        if ((*iterator)->getCl_str_info(1) == clientNickname)
+        {
+            iterator = this->operatorsInChannel.erase(iterator);
+            break; 
+        }
+        else
+        {
+            ++iterator;
+        }
+    }
+}
+
+
+std::string Channel::attemptJoinChannel( Client *client, const std::string &providedKey)
 {
     if (info.inviteOnly)
     {
-        if (!foundInvited(client->getCl_str_info(1)))
+        if (!isClientInvited(client->getCl_str_info(1)))
         {
             return ("473 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :Cannot join channel (+i)");
         }
@@ -217,7 +249,7 @@ std::string Channel::attemptJoinChannel(const std::string &providedKey, Client *
 
         if (isUserInChannel(client->getCl_str_info(1)))
         {
-            removeInvitedUser(client->getCl_str_info(1));
+            removeInvitedClient(client->getCl_str_info(1));
         }
 
         return ":" + client->getCl_str_info(1) + "!" + client->getCl_str_info(1) + "@" + client->getCl_str_info(2) + " JOIN " + info.channelName;
@@ -242,5 +274,20 @@ std::string Channel::getChannelModes() const
     }
 
     return (modeString == "+") ? "" : modeString;
+}
+
+void Channel::broadcastMessage(Client *sender, const std::string &message)
+{
+    for (auto client : this->operatorsInChannel)
+    {
+        if (client != sender)
+            client->do_TMess(message, 2);
+    }
+
+    for (auto client : this->clientsInChannel)
+    {
+        if (client != sender)
+            client->do_TMess(message, 2);
+    }
 }
 

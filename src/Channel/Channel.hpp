@@ -52,16 +52,19 @@ class Channel
         Client *findOperatorByNickname(const std::string &nickname);
         Client *findClientByNickname(const std::string &nickname);
 
-        int isUserInChannel(const std::string& nickname);
+        int isUserInChannel(const std::string &nickname);
         int isOperatorInChannel(const std::string &nickname);
-        int foundInvited(const std::string &nickname);
+        int isClientInvited(const std::string &nickname);
 
         void addInvitedGuest(Client *newGuest);
         void sendUserListToClient(Client *client);
-        std::string attemptJoinChannel(const std::string& providedKey, Client *client);
-        void removeInvitedUser(const std::string& userNickname);
-        std::string getChannelModes() const;
+        std::string attemptJoinChannel( Client *client, const std::string &providedKey);
+        void removeInvitedClient(const std::string &clientNickname);
+        void removeClientsInChannel(const std::string& clientNickname);
+        void removeOperatorsInChannel(const std::string& clientNickname);
 
+        std::string getChannelModes() const;
+        void broadcastMessage(Client *sender, const std::string &message);
 
 };      
 

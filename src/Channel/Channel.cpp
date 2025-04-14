@@ -314,3 +314,22 @@ std::string Channel::getChannelModes() const
     return "+" + flags + oss.str();
 }
 
+
+void Channel::handleKickCommand(Client *requester, const std::string &target, const std::string &comment)
+{
+    for (auto it = clientsInChannel.begin(); it != clientsInChannel.end(); ++it)
+    {
+        if ((*it)->getCl_str_info(1) == target)
+        {
+            std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
+
+            this->broadcastMessage(requester, kickMsg);  // Notify all others
+            requester->do_TMess(kickMsg, 2);               // Confirm to the one who issued the KICK
+
+            clientsInChannel.erase(it);  // Remove from channel
+            --info.currentClientCount;         // Decrement user count
+            break;
+        }
+    }
+}
+

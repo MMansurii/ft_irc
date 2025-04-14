@@ -66,8 +66,9 @@ class Channel
         void removeOperatorsInChannel(const std::string& clientNickname);
 
         std::string getChannelModes() const;
-        std::string getChannelModes() const;
         void broadcastMessage(Client *sender, const std::string &message);
+        void handleKickCommand(Client *requester, const std::string &target, const std::string &comment);
+
 
 };      
 

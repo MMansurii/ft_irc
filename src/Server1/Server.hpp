@@ -2,41 +2,49 @@
 #define SERVER_HPP
 
 #include <string>
-#include <vector>
-#include <poll.h>
 #include <netdb.h>
-#include <cstring>
-#include <iostream>
 #include <unistd.h>
+#include <cstring>
 #include <cstdlib>
+#include <iostream>
+#include <poll.h>
+#include <vector>
 
+// The Server class is responsible for setting up a listening TCP socket
+// and preparing the server to accept client connections on a given port.
 class Server {
 private:
-    std::string _port;               // Port to listen on
-    int _listeningSocket;            // Main socket file descriptor
+    std::string portValue;            // Port number to bind to (e.g., "6667")
+    int listeningSocket;              // File descriptor for the listening socket
+    std::string serverCreatedAt;      // Timestamp of server creation
 
-    // --- Helper methods for server setup ---
-    
-    // Configures address hints for getaddrinfo
-    void _initializeAddressHints(struct addrinfo &hints);
+    // Step 1: Fill addrinfo struct with desired socket options (IPv4/6, TCP, etc.)
+    void prepareSocketConfiguration(struct addrinfo &config);
 
-    // Resolves an address using the configured hints
-    void _resolveBindingAddress(struct addrinfo &hints, struct addrinfo *&resolvedInfo);
+    // Step 2: Resolve local address using getaddrinfo()
+    void resolveLocalAddress(struct addrinfo &config, struct addrinfo *&addressList);
 
-    // Creates a socket from the resolved address
-    int _createSocketFromAddress(struct addrinfo *resolvedInfo);
+    // Step 3: Create socket using the resolved address info
+    int createSocket(struct addrinfo *addressList);
 
-    // Binds the socket to the local address
-    void _bindSocketToResolvedAddress(int socketFD, struct addrinfo *resolvedInfo);
+    // Step 4: Bind socket to resolved IP address and port
+    void bindSocketToAddress(int fd, struct addrinfo *addressList);
 
-    // Starts listening on the bound socket
-    void _enableSocketListening(int socketFD);
+    // Step 5: Start listening on the socket
+    void enableListening(int fd, struct addrinfo *addressList);
+
+
+    std::string generateCurrentTime(const std::string& timeFormat);  // generates time string
+
 
 public:
+    // Constructor that sets the port value
     Server(std::string port);
-    
-    // Initializes the server (creates, binds, and listens)
-    void initializeServer();
+
+    // Public function to start the server initialization process
+    void startServer();
+
+    void setupCommandHandlers(); // New: command handler map initialization
 };
 
 #endif

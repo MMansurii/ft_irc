@@ -9,9 +9,13 @@
 #include <iostream>
 #include <poll.h>
 #include <vector>
+#include <cerrno>
 
 // The Server class is responsible for setting up a listening TCP socket
 // and preparing the server to accept client connections on a given port.
+class User; 
+
+
 class Server {
 private:
     std::string portValue;            // Port number to bind to (e.g., "6667")
@@ -43,6 +47,8 @@ public:
 
     // Public function to start the server initialization process
     void startServer();
+    // Main loop to run the server
+    void runMainLoop();
 
     void setupCommandHandlers(); // New: command handler map initialization
 };

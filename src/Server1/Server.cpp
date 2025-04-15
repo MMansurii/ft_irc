@@ -109,3 +109,136 @@ void Server::setupCommandHandlers() {
     // commandHandlers.push_back(std::make_pair("WHO", &Server::handleWhoCommand));
     // commandHandlers.push_back(std::make_pair("NOTICE", &Server::handleNoticeCommand));
 }
+
+
+
+////////////////
+#include "Server.hpp"
+
+// Starts the main server loop: monitors connections and routes activity
+void Server::runMainLoop() {
+    preparePollingList(); // Register main socket for polling
+
+    while (isServerActive) {
+        evaluatePollEvents(); // Poll for network activity
+    }
+
+    shutdownGracefully(); // Clean exit once loop ends
+}
+
+// Registers the server's primary socket into the poll list
+void Server::preparePollingList() {
+    struct pollfd serverPollfd;
+    serverPollfd.fd = mainSocketDescriptor;
+    serverPollfd.events = POLLIN | POLLOUT;
+    listOfPollDescriptors.push_back(serverPollfd);
+
+    std::cout << "\033[32m[ Server is now listening on socket: " << mainSocketDescriptor << " ]\033[0m\n";
+}
+
+// Runs poll() and handles the result status
+void Server::evaluatePollEvents() {
+    int activeCount = poll(listOfPollDescriptors.data(), listOfPollDescriptors.size(), -1);
+
+    if (activeCount == -1) {
+        handlePollFailure(); // poll failed
+        return;
+    }
+
+    if (activeCount > 0) {
+        processEachPollfd(); // Check each fd for readiness
+    }
+}
+
+// Prints poll error and sets shutdown flag if critical
+void Server::handlePollFailure() {
+    std::cerr << "\033[31m[ Poll failure: " << strerror(errno) << " ]\033[0m\n";
+
+    if (errno == EFAULT || errno == ENOMEM) {
+        isServerActive = false; // Critical error, stop server
+    }
+}
+
+// Walks through each pollfd to see who has activity
+void Server::processEachPollfd() {
+    for (std::vector<struct pollfd>::iterator it = listOfPollDescriptors.begin(); it != listOfPollDescriptors.end(); ) {
+        if (it->revents == 0) {
+            ++it;
+            continue;
+        }
+        checkPollfdState(it); // Dispatch based on revents
+        break; // Only one per tick to avoid iterator invalidation
+    }
+}
+
+// Routes pollfd activity to the correct handler
+void Server::checkPollfdState(std::vector<struct pollfd>::iterator descriptor) {
+    if ((descriptor->revents & POLLIN) || (descriptor->revents & POLLOUT)) {
+        handleIncomingOrOutgoingData(descriptor); // Read/write event
+    } else if ((descriptor->revents & POLLERR) || (descriptor->revents & POLLHUP) || (descriptor->revents & POLLNVAL)) {
+        handleConnectionIssue(descriptor); // Error or disconnection
+    }
+}
+
+// Delegates event type: accept new client or read client data
+void Server::handleIncomingOrOutgoingData(std::vector<struct pollfd>::iterator descriptor) {
+    if (descriptor->fd == mainSocketDescriptor) {
+        acceptNewClient(); // Incoming client
+    } else {
+        readClientData(descriptor); // Existing client
+    }
+}
+
+// Reports and manages faulty or dropped connections
+void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descriptor) {
+    std::string issueMessage = "Unknown issue";
+
+    if (descriptor->revents & POLLHUP) {
+        issueMessage = "Client closed the connection";
+    }
+    else if (descriptor->revents & POLLERR) {
+        issueMessage = "Socket-level error detected";
+    }
+    else if (descriptor->revents & POLLNVAL) {
+        issueMessage = "Bad socket descriptor detected";
+    }
+
+    terminateClientConnection(descriptor, issueMessage);
+}
+
+// Gracefully closes the server and prints status
+void Server::shutdownGracefully() {
+    cleanupAllResources();
+    std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
+}
+
+// Frees users, closes fds, and clears tracking lists
+void Server::cleanupAllResources() {
+    for (std::vector<std::pair<int, User*> >::iterator it = listOfUsers.begin(); it != listOfUsers.end(); ++it) {
+        leaveAllUserChannels(it->second);
+        close(it->first);
+        delete it->second;
+    }
+    listOfUsers.clear();
+    listOfPollDescriptors.clear();
+}
+
+// Forcefully removes a user after disconnection or error
+void Server::terminateClientConnection(std::vector<struct pollfd>::iterator descriptor, const std::string& message) {
+    std::cerr << "\033[31m[ Client disconnected: " << message << " (fd: " << descriptor->fd << ") ]\033[0m\n";
+
+    try {
+        for (std::vector<std::pair<int, User*> >::iterator it = listOfUsers.begin(); it != listOfUsers.end(); ++it) {
+            if (it->first == descriptor->fd) {
+                leaveAllUserChannels(it->second);
+                delete it->second;
+                listOfUsers.erase(it);
+                break;
+            }
+        }
+        close(descriptor->fd);
+        listOfPollDescriptors.erase(descriptor);
+    } catch (const std::exception& err) {
+        std::cerr << "\033[31m[ Cleanup failure: " << err.what() << " ]\033[0m\n";
+    }
+}

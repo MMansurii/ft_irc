@@ -333,3 +333,21 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
     }
 }
 
+void Channel::broadcastTopicUpdate(Client *client, const std::string &newTopic)
+{
+    const std::string &nickname = client->getCl_str_info(0);
+    const std::string &server = client->getCl_str_info(4);
+
+    info.channelTopic = (newTopic == ":") ? "" : newTopic;
+    info.lastTopicChangeTime = std::to_string(time(0));
+    info.topicSetter = nickname;
+
+    std::string formatTopicReply = ":" + server + " 332 " + nickname + ' ' + info.channelName + " :" + info.channelTopic ;
+    std::string formatTopicWhoTimeReply = ":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime; ;
+
+    broadcastMessage(client, formatTopicReply);
+    broadcastMessage(client, formatTopicWhoTimeReply);
+}
+
+
+

@@ -70,6 +70,8 @@ class Channel
         void handleKickCommand(Client *requester, const std::string &target, const std::string &comment);
         void broadcastTopicUpdate(Client *client, const std::string &newTopic);
         void updateInviteOnlyMode(Client *client, int flag);
+        void updateTopicRestrictionMode(Client *client, int flag);
+
 
 
 

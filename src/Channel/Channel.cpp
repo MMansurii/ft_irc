@@ -364,4 +364,21 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
     broadcastMessage(client, reply);
 }
 
+void Channel::updateTopicRestrictionMode(Client *client, int flag)
+{
+    if (flag != 1 && flag != -1)
+        return;
+
+    info.inviteOnly = flag;
+
+
+    const std::string &nickname = client->getCl_str_info(0);
+    const std::string modeChange = (flag == 1) ? "+t" : "-t";
+    const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
+
+    client->do_TMess(reply,2);
+    broadcastMessage(client, reply);
+}
+
+
 

@@ -71,6 +71,7 @@ class Channel
         void broadcastTopicUpdate(Client *client, const std::string &newTopic);
         void updateInviteOnlyMode(Client *client, int flag);
         void updateTopicRestrictionMode(Client *client, int flag);
+        void updateChannelKeyMode(Client *client, const std::string &rawArgs, int argIndex, int flag);
 
 
 

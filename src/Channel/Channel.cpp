@@ -380,5 +380,45 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
     broadcastMessage(client, reply);
 }
 
+void Channel::updateChannelKeyMode(Client *client, const std::string &rawArgs, int argIndex, int flag)
+{
+    const std::string &nickname = client->getCl_str_info(0);
+    const std::string modePrefix = ":" + nickname + " MODE " + info.channelName + " ";
+
+    if (flag == -1)
+    {
+        info.keyRequired = 0;
+        info.accessKey.clear();
+        const std::string reply = modePrefix + "-k";
+        client->do_TMess(reply,2);
+        broadcastMessage(client, reply);
+        return;
+    }
+
+    std::istringstream iss(rawArgs);
+    std::string arg;
+    for (int i = 0; i <= argIndex && iss >> arg; ++i)
+    {
+        if (i == argIndex)
+        {
+            if (arg == "x")
+            {
+                std::string sendMessage = ":" + client->getCl_str_info(4) + " 525 " + nickname + ' ' + info.channelName + " :Channel key cannot be 'x'";
+                client->do_TMess(sendMessage, 2);
+                return;
+            }
+
+            info.keyRequired = 1;
+            info.accessKey = arg;
+
+            const std::string reply = modePrefix + "+k";
+            client->do_TMess(reply, 2);
+            broadcastMessage(client, reply);
+            return;
+        }
+    }
+}
+
+
 
 

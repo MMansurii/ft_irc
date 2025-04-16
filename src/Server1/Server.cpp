@@ -187,11 +187,12 @@ void Server::checkPollfdState(std::vector<struct pollfd>::iterator descriptor) {
 }
 
 // Delegates event type: accept new client or read client data
+
 void Server::handleIncomingOrOutgoingData(std::vector<struct pollfd>::iterator descriptor) {
     if (descriptor->fd == mainSocketDescriptor) {
         acceptNewClient(); // Incoming client
     } else {
-        readClientData(descriptor); // Existing client
+        handleClientCommunication(descriptor); // Existing client
     }
 }
 
@@ -244,6 +245,82 @@ void Server::createClientInstance(int clientSocket, const struct sockaddr_storag
 
 /// end acceptNewClient(); // Incoming client
 
+void Server::handleClientCommunication(std::vector<struct pollfd>::iterator descriptor) {
+    try {
+        User* user = getUserByFd(descriptor->fd);
+        if (!user) return;
+
+        int bytes = 0;
+        std::string message = readFromSocket(user->getUserFd(), bytes);
+
+        if (isClientDisconnected(bytes)) {
+            std::string reason = (bytes == 0) ? "Client hung up" : "recv() error";
+            std::cerr << "\033[31m[ Disconnecting: " << reason << " ]\033[0m\n";
+            disconnectUserFromServer(descriptor->fd, reason);
+            return;
+        }
+
+        processClientMessage(user, bytes, message);
+    }
+    catch (const std::out_of_range& e) {
+        std::cerr << "\033[31m[ Error: Out-of-range while handling pollfd " << descriptor->fd << " ]\033[0m\n";
+    }
+    catch (const std::exception& e) {
+        std::cerr << "\033[31m[ Error: Exception in handleClientCommunication: " << e.what() << " ]\033[0m\n";
+    }
+}
+
+
+// Retrieves a user from the active user list by socket file descriptor
+User* Server::getUserByFd(int fd) {
+    for (size_t i = 0; i < listOfUsers.size(); ++i) {
+        if (listOfUsers[i].first == fd)
+            return listOfUsers[i].second;
+    }
+    return nullptr;
+}
+
+// Checks if the socket has disconnected or encountered an error
+bool Server::isClientDisconnected(int byteCount) {
+    return byteCount <= 0;
+}
+
+// Reads data from a user's socket until a full message is received
+std::string Server::readFromSocket(int fd, int& byteCount) {
+    std::string fullMessage;
+    char buffer[1024];
+    byteCount = 0;
+
+    while (fullMessage.rfind("\r\n") != fullMessage.length() - 2 || fullMessage.length() < 2) {
+        std::memset(buffer, 0, sizeof(buffer));
+        int bytes = recv(fd, buffer, sizeof(buffer), 0);
+        if (bytes <= 0) {
+            byteCount = bytes;
+            break;
+        }
+        fullMessage.append(buffer);
+        byteCount += bytes;
+    }
+
+    return fullMessage;
+}
+
+// Sets user message buffer, logs the message, and triggers command parsing
+void Server::processClientMessage(User* user, int bytes, const std::string& message) {
+    std::cout << "\033[90mBytes received: " << bytes << "\033[0m\n";
+    user->setMessage(message);
+    logMessage(user, message);
+    interpretClientCommand(user);  // Replaces _parseCmd()
+}
+
+// Logs incoming user messages with formatting
+void Server::logMessage(User* user, const std::string& msg) {
+    std::cout << "\033[33m[ MESSAGE RECEIVED : "
+              << user->getNickname() << " => " << msg << " ]\033[0m\n\n";
+}
+
+// end handleClientCommunication(struct pollfd& descriptor)
+
 // Reports and manages faulty or dropped connections
 void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descriptor) {
     std::string issueMessage = "Unknown issue";
@@ -282,17 +359,12 @@ void Server::terminateClientConnection(std::vector<struct pollfd>::iterator desc
 }
 
 
-///*****     */
-
-
-
 // Gracefully closes the server and prints status
 void Server::shutdownGracefully() {
     cleanupAllResources();
     std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
 }
 
-// Frees users, closes fds, and clears tracking lists
 // Disconnect and clean all users, file descriptors, and channels
 void Server::cleanupAllResources() {
     clearAllUsers();
@@ -324,3 +396,5 @@ void Server::deleteAllChannels() {
     }
     listOfChannels.clear();
 }
+
+

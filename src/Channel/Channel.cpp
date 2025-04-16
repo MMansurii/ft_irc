@@ -36,8 +36,8 @@ std::string Channel::getChannelDetail(ChannelDetailType type) const
         return info.topicSetter;
     case CREATION_DATE:
         return info.creationTimestamp;
-    // case ACCESS_KEY:
-    //     return info.accessKey;
+        // case ACCESS_KEY:
+        //     return info.accessKey;
 
     default:
         return "Unknown";
@@ -167,25 +167,25 @@ void Channel::sendUserListToClient(Client *client)
         {
             userListMessage += ' ';
         }
-        userListMessage += regularUser->getCl_str_info(1); 
+        userListMessage += regularUser->getCl_str_info(1);
         isFirstUser = false;
     }
 
-    client->do_TMess(userListMessage, 2); 
+    client->do_TMess(userListMessage, 2);
 
     // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the user list
     std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
-    client->do_TMess(endOfListMessage, 2); 
+    client->do_TMess(endOfListMessage, 2);
 }
 
-void Channel::removeInvitedClient(const std::string& clientNickname)
+void Channel::removeInvitedClient(const std::string &clientNickname)
 {
-    for (auto iterator = this->invitedClients.begin(); iterator != this->invitedClients.end(); )
+    for (auto iterator = this->invitedClients.begin(); iterator != this->invitedClients.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
             iterator = this->invitedClients.erase(iterator);
-            break; 
+            break;
         }
         else
         {
@@ -194,14 +194,14 @@ void Channel::removeInvitedClient(const std::string& clientNickname)
     }
 }
 
-void Channel::removeClientsInChannel(const std::string& clientNickname)
+void Channel::removeClientsInChannel(const std::string &clientNickname)
 {
-    for (auto iterator = this->clientsInChannel.begin(); iterator != this->clientsInChannel.end(); )
+    for (auto iterator = this->clientsInChannel.begin(); iterator != this->clientsInChannel.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
             iterator = this->clientsInChannel.erase(iterator);
-            break; 
+            break;
         }
         else
         {
@@ -210,14 +210,14 @@ void Channel::removeClientsInChannel(const std::string& clientNickname)
     }
 }
 
-void Channel::removeOperatorsInChannel(const std::string& clientNickname)
+void Channel::removeOperatorsInChannel(const std::string &clientNickname)
 {
-    for (auto iterator = this->operatorsInChannel.begin(); iterator != this->operatorsInChannel.end(); )
+    for (auto iterator = this->operatorsInChannel.begin(); iterator != this->operatorsInChannel.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
             iterator = this->operatorsInChannel.erase(iterator);
-            break; 
+            break;
         }
         else
         {
@@ -226,8 +226,7 @@ void Channel::removeOperatorsInChannel(const std::string& clientNickname)
     }
 }
 
-
-std::string Channel::attemptJoinChannel( Client *client, const std::string &providedKey)
+std::string Channel::attemptJoinChannel(Client *client, const std::string &providedKey)
 {
     if (info.inviteOnly)
     {
@@ -264,9 +263,12 @@ std::string Channel::getChannelModes() const
 {
     std::string modeString = "+";
 
-    if (info.inviteOnly) modeString += "i";
-    if (info.topicRestricted) modeString += "t";
-    if (info.keyRequired) modeString += "k";
+    if (info.inviteOnly)
+        modeString += "i";
+    if (info.topicRestricted)
+        modeString += "t";
+    if (info.keyRequired)
+        modeString += "k";
 
     if (info.maxClients > 0)
     {
@@ -314,7 +316,6 @@ std::string Channel::getChannelModes() const
     return "+" + flags + oss.str();
 }
 
-
 void Channel::handleKickCommand(Client *requester, const std::string &target, const std::string &comment)
 {
     for (auto it = clientsInChannel.begin(); it != clientsInChannel.end(); ++it)
@@ -323,11 +324,11 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
         {
             std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
 
-            this->broadcastMessage(requester, kickMsg);  // Notify all others
-            requester->do_TMess(kickMsg, 2);               // Confirm to the one who issued the KICK
+            this->broadcastMessage(requester, kickMsg); // Notify all others
+            requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
 
-            clientsInChannel.erase(it);  // Remove from channel
-            --info.currentClientCount;         // Decrement user count
+            clientsInChannel.erase(it); // Remove from channel
+            --info.currentClientCount;  // Decrement user count
             break;
         }
     }
@@ -342,8 +343,9 @@ void Channel::broadcastTopicUpdate(Client *client, const std::string &newTopic)
     info.lastTopicChangeTime = std::to_string(time(0));
     info.topicSetter = nickname;
 
-    std::string formatTopicReply = ":" + server + " 332 " + nickname + ' ' + info.channelName + " :" + info.channelTopic ;
-    std::string formatTopicWhoTimeReply = ":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime; ;
+    std::string formatTopicReply = ":" + server + " 332 " + nickname + ' ' + info.channelName + " :" + info.channelTopic;
+    std::string formatTopicWhoTimeReply = ":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime;
+    ;
 
     broadcastMessage(client, formatTopicReply);
     broadcastMessage(client, formatTopicWhoTimeReply);
@@ -360,7 +362,7 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
     const std::string modeChange = (flag == 1) ? "+i" : "-i";
     const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
 
-    client->do_TMess(reply,2);
+    client->do_TMess(reply, 2);
     broadcastMessage(client, reply);
 }
 
@@ -371,12 +373,11 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
 
     info.inviteOnly = flag;
 
-
     const std::string &nickname = client->getCl_str_info(0);
     const std::string modeChange = (flag == 1) ? "+t" : "-t";
     const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
 
-    client->do_TMess(reply,2);
+    client->do_TMess(reply, 2);
     broadcastMessage(client, reply);
 }
 
@@ -390,7 +391,7 @@ void Channel::updateChannelKeyMode(Client *client, const std::string &rawArgs, i
         info.keyRequired = 0;
         info.accessKey.clear();
         const std::string reply = modePrefix + "-k";
-        client->do_TMess(reply,2);
+        client->do_TMess(reply, 2);
         broadcastMessage(client, reply);
         return;
     }
@@ -419,6 +420,49 @@ void Channel::updateChannelKeyMode(Client *client, const std::string &rawArgs, i
     }
 }
 
+void Channel::toggleOperatorStatus(Client *client, const std::string &rawArgs, int argIndex, int flag)
+{
+    if (isOperatorInChannel(client->getCl_str_info(0)) == 0)
+        return;
 
+    std::istringstream iss(rawArgs);
+    std::string target;
+    for (int i = 0; i <= argIndex && iss >> target; ++i)
+    {
+        if (i == argIndex)
+            break;
+    }
 
+    if (target.empty())
+        return;
 
+    std::string modeChange;
+    if (flag == -1 && isOperatorInChannel(target))
+    {
+        clientsInChannel.push_back(findOperatorByNickname(target));
+        removeOperatorsInChannel(target);
+        modeChange = " -o " + target;
+    }
+    else if (flag == 1 && isOperatorInChannel(target) == 0)
+    {
+        if (isUserInChannel(target) == 0)
+        {
+            std::string errorMessage = "441 " + client->getCl_str_info(0) + ' ' + target + ' ' + info.channelName + ":The user is not in this channel";
+            client->do_TMess(errorMessage, 2);
+            return;
+        }
+        operatorsInChannel.push_back(findClientByNickname(target));
+        removeClientsInChannel(target);
+        modeChange = " +o " + target;
+    }
+    else
+    {
+        return;
+    }
+
+    const std::string prefix = ":" + client->getCl_str_info(0) + " MODE " + info.channelName;
+    const std::string reply =  prefix + modeChange;
+
+    client->do_TMess(reply, 2);
+    broadcastMessage(client, reply);
+}

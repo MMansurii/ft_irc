@@ -2,7 +2,9 @@
 #include "Server.hpp"
 #include <array>
 
- Server::Server(std::string port) : portValue(port), listeningSocket(-1) {}
+int isServerActive; // Global flag to control server loop
+
+ Server::Server(std::string port) : portValue(port), mainSocketDescriptor(-1) {}
 
 // Main function to initialize and configure the server socket
 void Server::startServer() {
@@ -14,7 +16,7 @@ void Server::startServer() {
     bindSocketToAddress(serverSocket, addressList);
     enableListening(serverSocket, addressList);
 
-    listeningSocket = serverSocket;
+    mainSocketDescriptor = serverSocket;
     freeaddrinfo(addressList);
     serverCreatedAt = generateCurrentTime("%Y-%m-%d.%X");
 }
@@ -112,9 +114,6 @@ void Server::setupCommandHandlers() {
 
 
 
-////////////////
-#include "Server.hpp"
-
 // Starts the main server loop: monitors connections and routes activity
 void Server::runMainLoop() {
     preparePollingList(); // Register main socket for polling
@@ -128,10 +127,17 @@ void Server::runMainLoop() {
 
 // Registers the server's primary socket into the poll list
 void Server::preparePollingList() {
-    struct pollfd serverPollfd;
-    serverPollfd.fd = mainSocketDescriptor;
-    serverPollfd.events = POLLIN | POLLOUT;
-    listOfPollDescriptors.push_back(serverPollfd);
+
+// typedef struct pollfd {
+//     int   fd;
+//     short events;
+//     short revents;
+// } pollfd;
+    struct pollfd serverPollfds;
+    serverPollfds.fd = mainSocketDescriptor;
+    serverPollfds.events = POLLIN | POLLOUT;
+    serverPollfds.revents = 0;
+    listOfPollDescriptors.push_back(serverPollfds);
 
     std::cout << "\033[32m[ Server is now listening on socket: " << mainSocketDescriptor << " ]\033[0m\n";
 }
@@ -161,12 +167,12 @@ void Server::handlePollFailure() {
 
 // Walks through each pollfd to see who has activity
 void Server::processEachPollfd() {
-    for (std::vector<struct pollfd>::iterator it = listOfPollDescriptors.begin(); it != listOfPollDescriptors.end(); ) {
-        if (it->revents == 0) {
-            ++it;
+    for (std::vector<struct pollfd>::iterator currentD = listOfPollDescriptors.begin(); currentD != listOfPollDescriptors.end(); ) {
+        if (currentD->revents == 0) {
+            ++currentD;
             continue;
         }
-        checkPollfdState(it); // Dispatch based on revents
+        checkPollfdState(currentD); // Dispatch based on revents
         break; // Only one per tick to avoid iterator invalidation
     }
 }
@@ -189,6 +195,55 @@ void Server::handleIncomingOrOutgoingData(std::vector<struct pollfd>::iterator d
     }
 }
 
+/////   acceptNewClient(); // Incoming client
+// Accepts a new client connection and registers them
+void Server::acceptNewClient() {
+    struct sockaddr_storage clientAddress;
+    socklen_t addressLength = sizeof(clientAddress);
+
+    int clientSocket = accept(mainSocketDescriptor,
+                              reinterpret_cast<sockaddr*>(&clientAddress),
+                              &addressLength);
+
+    if (clientSocket == -1) {
+        std::cerr << "\033[31m[ Accept failed: could not establish new connection ]\033[0m\n";
+        return;
+    }
+
+    registerClientPollfd(clientSocket);
+    createClientInstance(clientSocket, clientAddress);
+
+    std::cout << "\033[32m[ New connection accepted ]\033[0m\n";
+    std::cout << "\033[33m[ USER LOGGED IN ]\033[0m\n\n";
+}
+
+// Adds the new client's socket to the polling list
+void Server::registerClientPollfd(int clientSocket) {
+    struct pollfd newPollfd;
+    newPollfd.fd = clientSocket;
+    newPollfd.events = POLLIN;
+    newPollfd.revents = 0;
+
+    listOfPollDescriptors.push_back(newPollfd);
+}
+
+// Creates a new User object and registers it
+void Server::createClientInstance(int clientSocket, const struct sockaddr_storage& clientAddress) {
+    // Check if this client socket is already registered
+    for (size_t i = 0; i < listOfUsers.size(); ++i) {
+        if (listOfUsers[i].first == clientSocket) {
+            std::cerr << "\033[31m[ Duplicate socket FD detected: " << clientSocket << " — Skipping registration ]\033[0m\n";
+            return;
+        }
+    }
+
+    // Create new User and add to user list
+    User* newUser = new User(clientSocket, const_cast<sockaddr_storage*>(&clientAddress));
+    listOfUsers.push_back(std::make_pair(clientSocket, newUser));
+}
+
+/// end acceptNewClient(); // Incoming client
+
 // Reports and manages faulty or dropped connections
 void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descriptor) {
     std::string issueMessage = "Unknown issue";
@@ -204,23 +259,6 @@ void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descript
     }
 
     terminateClientConnection(descriptor, issueMessage);
-}
-
-// Gracefully closes the server and prints status
-void Server::shutdownGracefully() {
-    cleanupAllResources();
-    std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
-}
-
-// Frees users, closes fds, and clears tracking lists
-void Server::cleanupAllResources() {
-    for (std::vector<std::pair<int, User*> >::iterator it = listOfUsers.begin(); it != listOfUsers.end(); ++it) {
-        leaveAllUserChannels(it->second);
-        close(it->first);
-        delete it->second;
-    }
-    listOfUsers.clear();
-    listOfPollDescriptors.clear();
 }
 
 // Forcefully removes a user after disconnection or error
@@ -241,4 +279,48 @@ void Server::terminateClientConnection(std::vector<struct pollfd>::iterator desc
     } catch (const std::exception& err) {
         std::cerr << "\033[31m[ Cleanup failure: " << err.what() << " ]\033[0m\n";
     }
+}
+
+
+///*****     */
+
+
+
+// Gracefully closes the server and prints status
+void Server::shutdownGracefully() {
+    cleanupAllResources();
+    std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
+}
+
+// Frees users, closes fds, and clears tracking lists
+// Disconnect and clean all users, file descriptors, and channels
+void Server::cleanupAllResources() {
+    clearAllUsers();
+    closeAllPollDescriptors();
+    deleteAllChannels();
+}
+
+// Delete all User objects and close their sockets
+void Server::clearAllUsers() {
+    for (size_t i = 0; i < listOfUsers.size(); ++i) {
+        close(listOfUsers[i].first);
+        delete listOfUsers[i].second;
+    }
+    listOfUsers.clear();
+}
+
+// Close all poll file descriptors
+void Server::closeAllPollDescriptors() {
+    for (size_t i = 0; i < listOfPollDescriptors.size(); ++i) {
+        close(listOfPollDescriptors[i].fd);
+    }
+    listOfPollDescriptors.clear();
+}
+
+// Delete all channels stored on the server
+void Server::deleteAllChannels() {
+    for (size_t i = 0; i < listOfChannels.size(); ++i) {
+        delete listOfChannels[i].second;
+    }
+    listOfChannels.clear();
 }

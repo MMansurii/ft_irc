@@ -398,3 +398,162 @@ void Server::deleteAllChannels() {
 }
 
 
+// --> 61
+void Server::terminateUserSession(User* userObj, struct pollfd& pollEntry) {
+    
+
+    detachUserFromAllChannels(userObj);     // remove from channels
+    removeUserByPollfd(pollEntry);
+}
+
+// Detaches the given user from all IRC channels and removes empty channels
+void Server::detachUserFromAllChannels(User* userPtr) {
+    std::string userNick = userPtr->getNickname();
+
+    for (size_t i = 0; i < listOfChannels.size(); ++i) {
+        Channel* chan1 = listOfChannels[i].second;
+
+        removeUserRolesFromChannel(chan1, userNick);
+
+        if (isChannelEmpty(chan1)) {
+            delete chan1;
+            listOfChannels.erase(listOfChannels.begin() + i);
+            --i; // Adjust index after deletion
+        }
+    }
+}
+
+// Removes all roles the user had in a specific channel
+void Server::removeUserRolesFromChannel(Channel* chan1, const std::string& nick) {
+    if (chan1->foundOperator(nick)) {
+        chan1->kickModeOperator(nick);
+        chan1->setNbUser(-1);
+    }
+
+    if (chan1->foundUser(nick)) {
+        chan1->kickModeUser(nick);
+        chan1->setNbUser(-1);
+    }
+
+    if (chan1->foundInvited(nick)) {
+        chan1->kickModeInvited(nick);
+    }
+}
+
+// Determines whether the given channel is empty
+bool Server::isChannelEmpty(Channel* chan1) {
+    return chan1->getNbUser() <= 0;
+}
+
+// --> 61
+
+
+
+
+
+
+
+
+
+
+// --> method that deletes a user based on their pollfd struct 63
+void Server::removeUserByPollfd(struct pollfd& socketEntry) {
+    try {
+        int socketId = socketEntry.fd;
+        std::cout << "\033[32m[ Removing user with socket fd: " << socketId << " ]\033[0m\n";
+
+        User* targetUser = findUserBySocket(socketId);
+        if (!targetUser) {
+            std::cerr << "\033[31m[ No user found for socket fd: " << socketId << " ]\033[0m\n";
+            return;
+        }
+
+        closeSocketAndErasePollfd(socketId);
+        eraseUserFromUserList(socketId);
+
+        std::cerr << "\033[31m[ User disconnected on socket: " << socketId << " ]\033[0m\n";
+    }
+    catch (const std::exception& ex) {
+        std::cerr << "\033[31m[ Exception during user removal: " << ex.what() << " ]\033[0m\n";
+    }
+}
+
+// Searches for a user object given its socket ID
+User* Server::findUserBySocket(int socketId) {
+    for (size_t i = 0; i < listOfUsers.size(); ++i) {
+        if (listOfUsers[i].first == socketId) {
+            return listOfUsers[i].second;
+        }
+    }
+    return nullptr;
+}
+
+// Closes the socket and removes the corresponding pollfd entry
+void Server::closeSocketAndErasePollfd(int socketId) {
+    if (socketId != -1) {
+        close(socketId);
+    }
+    for (size_t j = 0; j < listOfPollDescriptors.size(); ++j) {
+        if (listOfPollDescriptors[j].fd == socketId) {
+            listOfPollDescriptors.erase(listOfPollDescriptors.begin() + j);
+            break;
+        }
+    }
+}
+
+
+// Deletes the user object and removes it from the user list
+void Server::eraseUserFromUserList(int socketId) {
+    for (size_t i = 0; i < listOfUsers.size(); ++i) {
+        if (listOfUsers[i].first == socketId) {
+            delete listOfUsers[i].second;
+            listOfUsers.erase(listOfUsers.begin() + i);
+            break;
+        }
+    }
+}
+
+// <-- method that deletes a user based on their pollfd struct 63
+// --> disconnects a client that failed authentication 67
+
+void Server::disconnectUnauthenticatedClient(User* disconnectedClient) {
+    try {
+        disconnectedClient->sendReply("Please, enter PASS first. Disconnecting.");
+        int clientSocket = disconnectedClient->getUserFd();
+
+        close(clientSocket);
+        removeSocketFromPollList(clientSocket);
+        removeUserEntry(clientSocket);
+
+        std::cout << "\033[33m[ Unauthenticated client removed: fd " << clientSocket << " ]\033[0m\n";
+    }
+    catch (const std::exception& error) {
+        std::cerr << "\033[31m[ Exception during disconnect: " << error.what() << " ]\033[0m\n";
+    }
+}
+
+// removes pollfd associated with the given socket
+void Server::removeSocketFromPollList(int clientSocket) {
+    for (std::vector<struct pollfd>::iterator socketEntry = listOfPollDescriptors.begin();
+         socketEntry != listOfPollDescriptors.end(); ++socketEntry) {
+        if (socketEntry->fd == clientSocket) {
+            listOfPollDescriptors.erase(socketEntry);
+            break;
+        }
+    }
+}
+
+// finds and removes the user from the active user list by socket
+void Server::removeUserEntry(int clientSocket) {
+    for (std::vector<std::pair<int, User*> >::iterator userEntry = listOfUsers.begin();
+         userEntry != listOfUsers.end(); ++userEntry) {
+        if (userEntry->first == clientSocket) {
+            delete userEntry->second;
+            listOfUsers.erase(userEntry);
+            break;
+        }
+    }
+}
+
+
+// <-- disconnects a client that failed authentication 67

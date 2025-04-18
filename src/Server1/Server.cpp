@@ -2,11 +2,12 @@
 #include "Server.hpp"
 #include <array>
 
-int isServerActive; // Global flag to control server loop
+int isServerActive; // Control server loop
 
- Server::Server(std::string port) : portValue(port), mainSocketDescriptor(-1) {}
+Server::Server(std::string port) : portValue(port), mainSocketDescriptor(-1) {}
 
-// Main function to initialize and configure the server socket
+// --> 101
+//initialize and configure the server socket
 void Server::startServer() {
     struct addrinfo socketConfig, *addressList = NULL;
     prepareSocketConfiguration(socketConfig);
@@ -93,7 +94,9 @@ std::string Server::generateCurrentTime(const std::string& timeFormat)
     std::cout << "\033[33m[ SERVER CREATED ]\033[0m\n\n";
     return std::string(formattedBuffer.data());
 }
+// <-- 101
 
+// Florent
 // Maps command strings to their corresponding handler methods
 void Server::setupCommandHandlers() {
     // commandHandlers.push_back(std::make_pair("CAP", &Server::handleCapCommand));
@@ -113,7 +116,7 @@ void Server::setupCommandHandlers() {
 }
 
 
-
+// -->107
 // Starts the main server loop: monitors connections and routes activity
 void Server::runMainLoop() {
     preparePollingList(); // Register main socket for polling
@@ -161,7 +164,7 @@ void Server::handlePollFailure() {
     std::cerr << "\033[31m[ Poll failure: " << strerror(errno) << " ]\033[0m\n";
 
     if (errno == EFAULT || errno == ENOMEM) {
-        isServerActive = false; // Critical error, stop server
+        // isServerActive = false; // Critical error, stop server
     }
 }
 
@@ -196,6 +199,47 @@ void Server::handleIncomingOrOutgoingData(std::vector<struct pollfd>::iterator d
     }
 }
 
+// Reports and manages faulty or dropped connections
+void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descriptor) {
+    std::string issueMessage = "Unknown issue";
+
+    if (descriptor->revents & POLLHUP) {
+        issueMessage = "Client closed the connection";
+    }
+    else if (descriptor->revents & POLLERR) {
+        issueMessage = "Socket-level error detected";
+    }
+    else if (descriptor->revents & POLLNVAL) {
+        issueMessage = "Bad socket descriptor detected";
+    }
+
+    terminateClientConnection(descriptor, issueMessage);
+}
+
+// Forcefully removes a user after disconnection or error
+void Server::terminateClientConnection(std::vector<struct pollfd>::iterator descriptor, const std::string& message) {
+    std::cerr << "\033[31m[ Client disconnected: " << message << " (fd: " << descriptor->fd << ") ]\033[0m\n";
+
+    try {
+        for (std::vector<std::pair<int, User*> >::iterator it = listOfUsers.begin(); it != listOfUsers.end(); ++it) {
+            if (it->first == descriptor->fd) {
+                leaveAllUserChannels(it->second);
+                delete it->second;
+                listOfUsers.erase(it);
+                break;
+            }
+        }
+        close(descriptor->fd);
+        listOfPollDescriptors.erase(descriptor);
+    } catch (const std::exception& err) {
+        std::cerr << "\033[31m[ Cleanup failure: " << err.what() << " ]\033[0m\n";
+    }
+}
+// <-- 107
+// 
+
+
+// --> 28
 /////   acceptNewClient(); // Incoming client
 // Accepts a new client connection and registers them
 void Server::acceptNewClient() {
@@ -242,9 +286,61 @@ void Server::createClientInstance(int clientSocket, const struct sockaddr_storag
     User* newUser = new User(clientSocket, const_cast<sockaddr_storage*>(&clientAddress));
     listOfUsers.push_back(std::make_pair(clientSocket, newUser));
 }
+/// end acceptNewClient(); // Incoming client 
+// <-- 28
 
-/// end acceptNewClient(); // Incoming client
+// --> 31
+// reads data from user's socket and stores it in their message buffer
+int Server::receiveClientData(User* user) {
+    int userSocket = user->getUserFd();
+    std::string fullMessage;
+    
+    int lastBytesRead = readCompleteMessageFromSocket(userSocket, fullMessage);
 
+    user->clearMessage();                    // Clear old message buffer
+    user->setMessage(fullMessage);           // Save the newly received message
+
+    printSocketReadConfirmation();
+    printUserMessageLog(user, fullMessage);
+
+
+    return lastBytesRead;                    // Return last read size (as in original)
+}
+
+// Reads data from a socket into a string until "\r\n" is received
+int Server::readCompleteMessageFromSocket(int socketFd, std::string& outputMessage) {
+    int lastBytesRead = 0;
+    char tempBuffer[1024];
+
+    while (outputMessage.rfind("\r\n") != outputMessage.length() - 2 || outputMessage.length() < 2) {
+        std::memset(tempBuffer, 0, sizeof(tempBuffer));
+        lastBytesRead = recv(socketFd, tempBuffer, sizeof(tempBuffer), 0);
+        if (lastBytesRead <= 0)
+            break;
+        outputMessage.append(tempBuffer);
+    }
+
+    return lastBytesRead;
+}
+
+
+// Displays confirmation that data was read from the socket
+void Server::printSocketReadConfirmation() {
+    std::cout << "\033[32m[ Data successfully read from socket ]\033[0m\033[90m (recv OK)\033[0m\n";
+}
+
+// Displays the incoming message received from a specific user
+void Server::printUserMessageLog(User* sender, const std::string& content) {
+    std::cout << "\033[33m[ INCOMING MESSAGE ] From: "
+              << sender->getNickname() << " | Content: " << content
+              << " \033[0m\n\n";
+}
+
+// <-- 31
+
+
+// --> 199
+// Reads data from a client and processes it
 void Server::handleClientCommunication(std::vector<struct pollfd>::iterator descriptor) {
     try {
         User* user = getUserByFd(descriptor->fd);
@@ -256,7 +352,7 @@ void Server::handleClientCommunication(std::vector<struct pollfd>::iterator desc
         if (isClientDisconnected(bytes)) {
             std::string reason = (bytes == 0) ? "Client hung up" : "recv() error";
             std::cerr << "\033[31m[ Disconnecting: " << reason << " ]\033[0m\n";
-            disconnectUserFromServer(descriptor->fd, reason);
+            terminateUserSession(user, *descriptor);
             return;
         }
 
@@ -269,7 +365,6 @@ void Server::handleClientCommunication(std::vector<struct pollfd>::iterator desc
         std::cerr << "\033[31m[ Error: Exception in handleClientCommunication: " << e.what() << " ]\033[0m\n";
     }
 }
-
 
 // Retrieves a user from the active user list by socket file descriptor
 User* Server::getUserByFd(int fd) {
@@ -321,50 +416,19 @@ void Server::logMessage(User* user, const std::string& msg) {
 
 // end handleClientCommunication(struct pollfd& descriptor)
 
-// Reports and manages faulty or dropped connections
-void Server::handleConnectionIssue(std::vector<struct pollfd>::iterator descriptor) {
-    std::string issueMessage = "Unknown issue";
-
-    if (descriptor->revents & POLLHUP) {
-        issueMessage = "Client closed the connection";
-    }
-    else if (descriptor->revents & POLLERR) {
-        issueMessage = "Socket-level error detected";
-    }
-    else if (descriptor->revents & POLLNVAL) {
-        issueMessage = "Bad socket descriptor detected";
-    }
-
-    terminateClientConnection(descriptor, issueMessage);
-}
-
-// Forcefully removes a user after disconnection or error
-void Server::terminateClientConnection(std::vector<struct pollfd>::iterator descriptor, const std::string& message) {
-    std::cerr << "\033[31m[ Client disconnected: " << message << " (fd: " << descriptor->fd << ") ]\033[0m\n";
-
-    try {
-        for (std::vector<std::pair<int, User*> >::iterator it = listOfUsers.begin(); it != listOfUsers.end(); ++it) {
-            if (it->first == descriptor->fd) {
-                leaveAllUserChannels(it->second);
-                delete it->second;
-                listOfUsers.erase(it);
-                break;
-            }
-        }
-        close(descriptor->fd);
-        listOfPollDescriptors.erase(descriptor);
-    } catch (const std::exception& err) {
-        std::cerr << "\033[31m[ Cleanup failure: " << err.what() << " ]\033[0m\n";
-    }
-}
 
 
+///*****     */
+
+
+// --> 59
 // Gracefully closes the server and prints status
 void Server::shutdownGracefully() {
     cleanupAllResources();
     std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
 }
 
+// Frees users, closes fds, and clears tracking lists
 // Disconnect and clean all users, file descriptors, and channels
 void Server::cleanupAllResources() {
     clearAllUsers();
@@ -396,6 +460,12 @@ void Server::deleteAllChannels() {
     }
     listOfChannels.clear();
 }
+
+// <-- 59
+
+
+//** */
+
 
 
 // --> 61
@@ -445,7 +515,7 @@ bool Server::isChannelEmpty(Channel* chan1) {
     return chan1->getNbUser() <= 0;
 }
 
-// --> 61
+// <-- 61
 
 
 

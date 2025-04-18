@@ -509,7 +509,7 @@ void Channel::updateUserLimit(Client *client, const std::string &rawArgs, int ar
     {
         std::string limitNumError = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Limit below current client count.";
         client->do_TMess(limitNumError, 2);
-        
+
         return;
     }
 
@@ -517,4 +517,26 @@ void Channel::updateUserLimit(Client *client, const std::string &rawArgs, int ar
     std::string msg = ":" + client->getCl_str_info(0) + " MODE " + info.channelName + " +l " + token;
     client->do_TMess(msg, 2);
     broadcastMessage(client, msg);
+}
+
+void Channel::displayMemberListToClient(Client *client)
+{
+    const std::string &server = client->getCl_str_info(4);
+    const std::string &nickname = client->getCl_str_info(1);
+
+    for (std::list<Client *>::iterator it = operatorsInChannel.begin(); it != operatorsInChannel.end(); ++it)
+    {
+        std::string message = ":" + server + " 352 " + nickname + ' ' + info.channelName + ' ' +
+                              (*it)->getCl_str_info(0) + ' ' + (*it)->getCl_str_info(2) + ' ' +
+                              (*it)->getCl_str_info(4) + ' ' + (*it)->getCl_str_info(1) + " @ :0 " + (*it)->getCl_str_info(3);
+        client->do_TMess(message, 2);
+    }
+
+    for (std::list<Client *>::iterator it = clientsInChannel.begin(); it != clientsInChannel.end(); ++it)
+    {
+        std::string message = ":" + server + " 352 " + nickname + ' ' + info.channelName + ' ' +
+                              (*it)->getCl_str_info(0) + ' ' + (*it)->getCl_str_info(2) + ' ' +
+                              (*it)->getCl_str_info(4) + ' ' + (*it)->getCl_str_info(1) + " H :0 " + (*it)->getCl_str_info(3);
+        client->do_TMess(message, 2);
+    }
 }

@@ -75,12 +75,8 @@ class Channel
         void toggleOperatorStatus(Client *client, const std::string& rawArgs, int argIndex, int flag);
         void updateUserLimit(Client *client, const std::string &rawArgs, int argIndex, int flag);
         void displayMemberListToClient(Client *client);
-
-
-
-
-
-
+        void applyChannelModes(Client *client, const std::string &modes, std::string modeArgs);
+        int validateModeArguments(const std::string &modes, std::string modeArgs);
 };      
 
 

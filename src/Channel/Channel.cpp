@@ -540,3 +540,91 @@ void Channel::displayMemberListToClient(Client *client)
         client->do_TMess(message, 2);
     }
 }
+
+void Channel::applyChannelModes(Client *client, const std::string &modes, std::string modeArgs)
+{
+    if (validateModeArguments(modes, modeArgs) == 0)
+    {
+        std::string erorrMessage = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Invalid mode format.";
+        client->do_TMess(erorrMessage, 2);
+        return;
+    }
+
+    int flag = 0;
+    int argIndex = 0;
+
+    for (size_t i = 0; i < modes.length(); ++i)
+    {
+        char modeChar = modes[i];
+
+        if (modeChar == '+')
+            flag = 1;
+        else if (modeChar == '-')
+            flag = -1;
+        else
+        {
+            switch (modeChar)
+            {
+            case 'i':
+                updateInviteOnlyMode(client, flag);
+                break;
+            case 't':
+                updateTopicRestrictionMode(client, flag);
+                break;
+            case 'k':
+                updateChannelKeyMode(client, modeArgs, argIndex, flag);
+                argIndex++;
+                break;
+            case 'o':
+                toggleOperatorStatus(client, modeArgs, argIndex, flag);
+                argIndex++;
+                break;
+            case 'l':
+                updateUserLimit(client, modeArgs, argIndex, flag);
+                argIndex++;
+                break;
+            default:
+
+                client->do_TMess(("472 " + client->getCl_str_info(1) + ' ' + std::string(1, modeChar)), 2);
+            }
+        }
+    }
+}
+
+int Channel::validateModeArguments(const std::string &modes, std::string modeArgs)
+{
+    int givenArgs = 0;
+    int expectedArgs = 0;
+    int flag = 0;
+    std::string currentArg;
+    size_t pos;
+
+    // Count actual arguments provided
+    while (!modeArgs.empty())
+    {
+        pos = modeArgs.find(' ');
+        currentArg = modeArgs.substr(0, pos);
+        modeArgs.erase(0, (pos == std::string::npos) ? currentArg.length() : currentArg.length() + 1);
+        givenArgs++;
+        if (pos == std::string::npos)
+            break;
+    }
+
+    // Determine expected number of arguments based on mode string
+    if (!modes.empty() && (modes[0] == '+' || modes[0] == '-'))
+    {
+        flag = (modes[0] == '+') ? 1 : -1;
+        for (size_t i = 1; i < modes.size(); ++i)
+        {
+            if (modes[i] == '+')
+                flag = 1;
+            else if (modes[i] == '-')
+                flag = -1;
+            else if ((flag == 1 && (modes[i] == 'k' || modes[i] == 'o' || modes[i] == 'l')) ||
+                     (flag == -1 && modes[i] == 'k' && info.keyRequired == 1))
+                expectedArgs++;
+        }
+    }
+
+    return (givenArgs == expectedArgs) ? 1 : 0;
+}

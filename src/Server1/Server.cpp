@@ -4,7 +4,20 @@
 
 int isServerActive; // Control server loop
 
-Server::Server(std::string port) : portValue(port), mainSocketDescriptor(-1) {}
+Server::Server() {}
+
+Server::~Server() {}
+
+Server::Server(const std::string& initPort, const std::string& initPassword)
+    : portValue(initPort), passwordValue(initPassword), mainSocketDescriptor(-1), isServerActive(true) {
+
+    startServer();                  
+
+    setupCommandHandlers();    
+    runMainLoop();       
+}
+
+
 
 // --> 101
 //initialize and configure the server socket
@@ -341,30 +354,33 @@ void Server::printUserMessageLog(User* sender, const std::string& content) {
 
 // --> 199
 // Reads data from a client and processes it
-void Server::handleClientCommunication(std::vector<struct pollfd>::iterator descriptor) {
+
+// Main entry point for handling a poll event on an existing client
+void Server::handlePollInput(std::vector<struct pollfd>::iterator pollIterator) {
     try {
-        User* user = getUserByFd(descriptor->fd);
-        if (!user) return;
+        logReceiveStart();
 
-        int bytes = 0;
-        std::string message = readFromSocket(user->getUserFd(), bytes);
-
-        if (isClientDisconnected(bytes)) {
-            std::string reason = (bytes == 0) ? "Client hung up" : "recv() error";
-            std::cerr << "\033[31m[ Disconnecting: " << reason << " ]\033[0m\n";
-            terminateUserSession(user, *descriptor);
+        User* user = getUserByFd(pollIterator->fd);
+        if (!user) {
+            logUserNotFound(pollIterator->fd);
             return;
         }
 
-        processClientMessage(user, bytes, message);
-    }
-    catch (const std::out_of_range& e) {
-        std::cerr << "\033[31m[ Error: Out-of-range while handling pollfd " << descriptor->fd << " ]\033[0m\n";
-    }
-    catch (const std::exception& e) {
-        std::cerr << "\033[31m[ Error: Exception in handleClientCommunication: " << e.what() << " ]\033[0m\n";
+        int bytesRead = receiveClientData(user);
+        logByteCount(bytesRead);
+
+        if (isDisconnection(bytesRead)) {
+            handleDisconnection(user, *pollIterator, bytesRead);
+        } else {
+            interpretClientCommand(user);
+        }
+    } catch (const std::out_of_range& error) {
+        std::cerr << "\033[31m[ Error: out_of_range during poll processing ]\033[0m\n";
+    } catch (const std::exception& error) {
+        std::cerr << "\033[31m[ General Exception in handlePollInput: " << error.what() << " ]\033[0m\n";
     }
 }
+
 
 // Retrieves a user from the active user list by socket file descriptor
 User* Server::getUserByFd(int fd) {
@@ -375,50 +391,37 @@ User* Server::getUserByFd(int fd) {
     return nullptr;
 }
 
-// Checks if the socket has disconnected or encountered an error
-bool Server::isClientDisconnected(int byteCount) {
-    return byteCount <= 0;
+// Logs the start of data reception
+void Server::logReceiveStart() {
+    std::cout << "\033[34m[ --> Receiving data ]\033[0m\n";
 }
 
-// Reads data from a user's socket until a full message is received
-std::string Server::readFromSocket(int fd, int& byteCount) {
-    std::string fullMessage;
-    char buffer[1024];
-    byteCount = 0;
-
-    while (fullMessage.rfind("\r\n") != fullMessage.length() - 2 || fullMessage.length() < 2) {
-        std::memset(buffer, 0, sizeof(buffer));
-        int bytes = recv(fd, buffer, sizeof(buffer), 0);
-        if (bytes <= 0) {
-            byteCount = bytes;
-            break;
-        }
-        fullMessage.append(buffer);
-        byteCount += bytes;
-    }
-
-    return fullMessage;
+// Checks if the user has disconnected (recv returned <= 0)
+bool Server::isDisconnection(int bytesRead) {
+    return bytesRead <= 0;
 }
 
-// Sets user message buffer, logs the message, and triggers command parsing
-void Server::processClientMessage(User* user, int bytes, const std::string& message) {
-    std::cout << "\033[90mBytes received: " << bytes << "\033[0m\n";
-    user->setMessage(message);
-    logMessage(user, message);
-    interpretClientCommand(user);  // Replaces _parseCmd()
+// Handles a user's disconnection scenario
+void Server::handleDisconnection(User* user, struct pollfd& pollEntry, int resultCode) {
+    if (resultCode == 0)
+        std::cerr << "\033[31m[ Notice: Client hung up ]\033[0m\n";
+    else
+        std::cerr << "\033[31m[ Error: recv() failure during communication ]\033[0m\n";
+
+    terminateUserSession(user, pollEntry);
 }
 
-// Logs incoming user messages with formatting
-void Server::logMessage(User* user, const std::string& msg) {
-    std::cout << "\033[33m[ MESSAGE RECEIVED : "
-              << user->getNickname() << " => " << msg << " ]\033[0m\n\n";
+// Logs if user was not found
+void Server::logUserNotFound(int fd) {
+    std::cerr << "\033[31m[ Error: No user found for socket fd: " << fd << " ]\033[0m\n";
 }
 
-// end handleClientCommunication(struct pollfd& descriptor)
+// Logs how many bytes were read
+void Server::logByteCount(int bytes) {
+    std::cout << "\033[90m[ Bytes received: " << bytes << " ]\033[0m\n";
+}
 
-
-
-///*****     */
+// <-- 199
 
 
 // --> 59
@@ -462,11 +465,6 @@ void Server::deleteAllChannels() {
 }
 
 // <-- 59
-
-
-//** */
-
-
 
 // --> 61
 void Server::terminateUserSession(User* userObj, struct pollfd& pollEntry) {
@@ -518,15 +516,8 @@ bool Server::isChannelEmpty(Channel* chan1) {
 // <-- 61
 
 
-
-
-
-
-
-
-
-
-// --> method that deletes a user based on their pollfd struct 63
+// --> 63
+// --> method that deletes a user based on their pollfd struct 
 void Server::removeUserByPollfd(struct pollfd& socketEntry) {
     try {
         int socketId = socketEntry.fd;
@@ -583,8 +574,9 @@ void Server::eraseUserFromUserList(int socketId) {
     }
 }
 
-// <-- method that deletes a user based on their pollfd struct 63
-// --> disconnects a client that failed authentication 67
+// <-- 63
+// --> 67
+// --> disconnects a client that failed authentication 
 
 void Server::disconnectUnauthenticatedClient(User* disconnectedClient) {
     try {
@@ -625,5 +617,6 @@ void Server::removeUserEntry(int clientSocket) {
     }
 }
 
+// <-- 67
 
-// <-- disconnects a client that failed authentication 67
+// End of Server.cpp

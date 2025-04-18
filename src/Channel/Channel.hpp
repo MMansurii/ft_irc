@@ -73,6 +73,8 @@ class Channel
         void updateTopicRestrictionMode(Client *client, int flag);
         void updateChannelKeyMode(Client *client, const std::string &rawArgs, int argIndex, int flag);
         void toggleOperatorStatus(Client *client, const std::string& rawArgs, int argIndex, int flag);
+        void updateUserLimit(Client *client, const std::string &rawArgs, int argIndex, int flag);
+
 
 
 

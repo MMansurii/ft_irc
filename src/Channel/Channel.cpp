@@ -461,8 +461,60 @@ void Channel::toggleOperatorStatus(Client *client, const std::string &rawArgs, i
     }
 
     const std::string prefix = ":" + client->getCl_str_info(0) + " MODE " + info.channelName;
-    const std::string reply =  prefix + modeChange;
+    const std::string reply = prefix + modeChange;
 
     client->do_TMess(reply, 2);
     broadcastMessage(client, reply);
+}
+
+void Channel::updateUserLimit(Client *client, const std::string &rawArgs, int argIndex, int flag)
+{
+    if (flag == -1)
+    {
+        info.maxClients = 0;
+        std::string msg = ":" + client->getCl_str_info(0) + " MODE " + info.channelName + " -l";
+        client->do_TMess(msg, 2);
+        broadcastMessage(client, msg);
+        return;
+    }
+
+    std::istringstream iss(rawArgs);
+    std::string token;
+    for (int i = 0; i <= argIndex && iss >> token; ++i)
+        ;
+
+    if (token.empty())
+    {
+        std::string noArgError = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Client limit value is missing.";
+        client->do_TMess(noArgError, 2);
+        return;
+    }
+
+    if (token.find_first_not_of("0123456789") != std::string::npos)
+    {
+        std::string numericArgError = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Client limit must be a numeric value.";
+        client->do_TMess(numericArgError, 2);
+        return;
+    }
+
+    int limit = std::stoi(token);
+    if (limit > 999)
+    {
+        std::string maxNumError = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Client limit cannot exceed 999.";
+        client->do_TMess(maxNumError, 2);
+        return;
+    }
+
+    if (limit < static_cast<int>(info.maxClients))
+    {
+        std::string limitNumError = ":" + client->getCl_str_info(4) + " 400 " + client->getCl_str_info(0) + "!" + client->getCl_str_info(0) + "@" + client->getCl_str_info(2) + ' ' + "MODE" + " :" + "Limit below current client count.";
+        client->do_TMess(limitNumError, 2);
+        
+        return;
+    }
+
+    info.maxClients = limit;
+    std::string msg = ":" + client->getCl_str_info(0) + " MODE " + info.channelName + " +l " + token;
+    client->do_TMess(msg, 2);
+    broadcastMessage(client, msg);
 }

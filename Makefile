@@ -61,28 +61,12 @@ $(NAME): $(OBJS)
 	@$(CC) $(CFLAGS) $(OBJS) $(INCLUDE) -o $(NAME)
 	@echo "$(GREEN)✓ Created executable: $(WHITE)$(NAME)$(RESET)"
 
-SRC_lexer           = maintest.cpp src/utils4main.cpp src/Server/Server.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp src/command/Command_monitor.cpp src/command/Join.cpp src/command/Nick.cpp src/command/Ping.cpp src/command/Quit.cpp src/command/User.cpp src/command/Cap.cpp  src/command/Pass.cpp src/command/Privmsg.cpp
-OBJS_lexer          = $(SRC_lexer:.cpp=.o)
-INCLUDE_lexer       = -I src/
 
 %.o: %.cpp
 	@echo -ne "$(CYAN)Compiling $<... $(RESET)"
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo "$(GREEN)✓$(RESET)"
 
-lexer: pre_lexer $(OBJS_lexer)
-	@echo "$(YELLOW)Linking lexer objects...$(RESET)"
-	@for i in $(LOADING_CHARS); do \
-		echo -ne "\r$(YELLOW)Linking... $$i $(RESET)"; \
-		sleep 0.1; \
-	done
-	@echo -ne "\r$(GREEN)Linking... ✓ $(RESET)\n"
-	@$(CC) $(CFLAGS) $(OBJS_lexer) $(INCLUDE_lexer) -o parser
-	@echo "$(GREEN)✓ Created parser utility: $(WHITE)parser$(RESET)"
-
-pre_lexer:
-	@echo "$(BLUE)Building lexer components...$(RESET)"
-	@sleep 0.5
 
 clean:
 	@echo "$(RED)Cleaning object files...$(RESET)"
@@ -90,7 +74,7 @@ clean:
 		echo -ne "\r$(RED)Cleaning... $$i $(RESET)"; \
 		sleep 0.1; \
 	done
-	@rm -rf $(OBJS) $(OBJS_lexer)
+	@rm -rf $(OBJS) 
 	@echo -ne "\r$(GREEN)Cleaning... ✓ $(RESET)\n"
 	@echo "$(GREEN)✓ Removed object files$(RESET)"
 

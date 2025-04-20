@@ -25,7 +25,6 @@ Server::Server(const std::string &initPort, const std::string &initPassword)
 // Build the mapping from command names to member handler functions
 void Server::setupCommandHandlers() {
   cmdHandlers.clear();
-  cmdHandlers["CAP"] = &Server::handleCAP;
   cmdHandlers["PASS"] = &Server::handlePASS;
   cmdHandlers["NICK"] = &Server::handleNICK;
   cmdHandlers["USER"] = &Server::handleUSER;

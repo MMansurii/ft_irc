@@ -259,24 +259,6 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
     }
 }
 
-std::string Channel::getChannelModes() const
-{
-    std::string modeString = "+";
-
-    if (info.inviteOnly)
-        modeString += "i";
-    if (info.topicRestricted)
-        modeString += "t";
-    if (info.keyRequired)
-        modeString += "k";
-
-    if (info.maxClients > 0)
-    {
-        modeString += "l " + std::to_string(info.maxClients);
-    }
-
-    return (modeString == "+") ? "" : modeString;
-}
 
 void Channel::broadcastMessage(Client *sender, const std::string &message)
 {

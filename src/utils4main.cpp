@@ -1,6 +1,8 @@
 // Function: Utility functions for main.cpp
 
 #include "utils4main.hpp"
+#include "Server/Server.hpp"
+#include <signal.h>
 
 // show error message
 void showError(int i, int ac,char **av) {
@@ -89,13 +91,25 @@ int check_password(std::string password) {
 }
 
 
+// Launch the server: ctor sets up and enters the main loop
 void run_server(int argc, char **argv) {
     (void)argc;
-    (void)argv;
-    // Run server
+    // argv[1] = port, argv[2] = password
+    Server server(argv[1], argv[2]);
+    // when ctor returns, server has cleanly shut down
 }
 
+// Signal the server to exit its poll loop
 void stop_server() {
-    // Stop server
+    extern int isServerActive;
+    isServerActive = 0;
+}
+
+// SIGINT handler: stop the server gracefully
+void checkSignal(int sig) {
+    if (sig == SIGINT) {
+        std::cout << "\nCaught SIGINT, shutting down...\n";
+        stop_server();
+    }
 }
 

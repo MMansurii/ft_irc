@@ -49,6 +49,18 @@ class Client{
         // Doing some activities in one function
         // clear-> Type 1
         void do_NoMess(int Type);
+
+        // Convenience methods for commands
+        // Get the client's nickname
+        std::string getNickname();
+        // Send a raw reply message to the client
+        void sendReply(const std::string &message);
+
+        // Convenience methods for commands
+        // Get the client's nickname
+        std::string getNickname();
+        // Send a raw reply message to the client
+        void sendReply(const std::string &message);
        
 };
 

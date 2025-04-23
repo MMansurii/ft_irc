@@ -311,7 +311,9 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
     {
         if ((*it)->getCl_str_info(1) == target)
         {
-            std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
+            // Format KICK message with full client prefix
+            std::string kickMsg = ":" + requester->getCl_str_info(1) + "!" + requester->getCl_str_info(0) + "@" + requester->getCl_str_info(2)
+                + " KICK " + info.channelName + " " + target + " :" + comment;
 
             this->broadcastMessage(requester, kickMsg); // Notify all others
             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK

@@ -40,7 +40,12 @@ void Server::handleINVITE(Client* user, std::istringstream& iss, const std::stri
         return;
     }
     chan->addInvitedGuest(targetUser);
-    std::string inviteMsg = ":" + user->getNickname() + " INVITE " + targetNick + " " + chanName;
+    // Notify the target user of the invitation
+    std::string inviteMsg = ":" + user->getCl_str_info(1) + "!" + user->getCl_str_info(0) + "@" + user->getCl_str_info(2)
+        + " INVITE " + targetNick + " " + chanName;
     targetUser->sendReply(inviteMsg);
-    user->sendReply("341 " + user->getNickname() + " " + targetNick + " " + chanName);
+    // Confirm to inviter with RPL_INVITING (341)
+    std::string rplInvite = ":" + user->getCl_str_info(4) + " 341 " + user->getCl_str_info(1)
+        + " " + targetNick + " " + chanName;
+    user->sendReply(rplInvite);
 }

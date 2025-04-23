@@ -14,7 +14,9 @@ void Server::handlePRIVMSG(Client* user, std::istringstream& iss, const std::str
     user->sendReply("461 PRIVMSG :Not enough parameters");
     return;
   }
-  std::string full = ":" + user->getNickname() + " PRIVMSG " + target + " :" + content;
+  // Prefix with full user identity: nickname!username@hostname
+  std::string full = ":" + user->getCl_str_info(1) + "!" + user->getCl_str_info(0) + "@" + user->getCl_str_info(2)
+    + " PRIVMSG " + target + " :" + content;
   if (!target.empty() && target[0] == '#') {
     Channel* chan = nullptr;
     for (size_t j = 0; j < listOfChannels.size(); ++j) {

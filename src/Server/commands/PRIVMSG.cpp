@@ -16,19 +16,36 @@ void Server::handlePRIVMSG(Client* user, std::istringstream& iss, const std::str
   }
   std::string full = ":" + user->getNickname() + " PRIVMSG " + target + " :" + content;
   if (!target.empty() && target[0] == '#') {
+    Channel* chan = nullptr;
     for (size_t j = 0; j < listOfChannels.size(); ++j) {
       if (listOfChannels[j].first == target) {
-        listOfChannels[j].second->broadcastMessage(user, full);
+        chan = listOfChannels[j].second;
         break;
       }
     }
+    if (!chan) {
+      user->sendReply("403 " + user->getNickname() + " " + target + " :No such channel");
+      return;
+    }
+    // Check channel membership
+    if (chan->isUserInChannel(user->getNickname()) == 0 &&
+        chan->isOperatorInChannel(user->getNickname()) == 0) {
+      user->sendReply("404 " + user->getNickname() + " " + target + " :Cannot send to channel");
+      return;
+    }
+    chan->broadcastMessage(user, full);
   } else {
+    bool found = false;
     for (size_t j = 0; j < listOfUsers.size(); ++j) {
       Client* u = listOfUsers[j].second;
       if (u->getNickname() == target) {
         u->sendReply(full);
+        found = true;
         break;
       }
+    }
+    if (!found) {
+      user->sendReply("401 " + user->getNickname() + " " + target + " :No such nick");
     }
   }
 }

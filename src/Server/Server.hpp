@@ -90,6 +90,10 @@ private:
   void handleJOIN(Client* user, std::istringstream& iss, const std::string& line);
   void handlePART(Client* user, std::istringstream& iss, const std::string& line);
   void handlePRIVMSG(Client* user, std::istringstream& iss, const std::string& line);
+  void handleKICK(Client* user, std::istringstream& iss, const std::string& line);
+  void handleINVITE(Client* user, std::istringstream& iss, const std::string& line);
+  void handleMODE(Client* user, std::istringstream& iss, const std::string& line);
+  void handleTOPIC(Client* user, std::istringstream& iss, const std::string& line);
 
   // Parse and execute a client command
   void interpretClientCommand(Client *user);

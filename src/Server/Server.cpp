@@ -35,6 +35,10 @@ void Server::setupCommandHandlers() {
   cmdHandlers["JOIN"] = &Server::handleJOIN;
   cmdHandlers["PART"] = &Server::handlePART;
   cmdHandlers["PRIVMSG"] = &Server::handlePRIVMSG;
+  cmdHandlers["KICK"] = &Server::handleKICK;
+  cmdHandlers["INVITE"] = &Server::handleINVITE;
+  cmdHandlers["MODE"] = &Server::handleMODE;
+  cmdHandlers["TOPIC"] = &Server::handleTOPIC;
 }
 
 // --> 101

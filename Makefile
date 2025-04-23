@@ -45,6 +45,10 @@ SRCS                = main.cpp \
                       src/Server/commands/PRIVMSG.cpp \
                       src/Server/commands/QUIT.cpp \
                       src/Server/commands/USER.cpp \
+                      src/Server/commands/KICK.cpp \
+                      src/Server/commands/INVITE.cpp \
+                      src/Server/commands/MODE.cpp \
+                      src/Server/commands/TOPIC.cpp \
                       src/Client/Client.cpp \
                       src/Channel/Channel.cpp
 CFLAGS              = -Wall -Werror -Wextra -std=c++17

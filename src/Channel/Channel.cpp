@@ -1,4 +1,6 @@
 #include "Channel.hpp"
+// For std::set in broadcastMessage
+#include <set>
 
 Channel::Channel(const std::string &name, const std::string &key, Client *client)
 {
@@ -262,16 +264,21 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 
 void Channel::broadcastMessage(Client *sender, const std::string &message)
 {
+    // Collect unique recipients (excluding sender)
+    std::set<Client*> recipients;
     for (auto client : this->operatorsInChannel)
     {
         if (client != sender)
-            client->do_TMess(message, 2);
+            recipients.insert(client);
     }
-
     for (auto client : this->clientsInChannel)
     {
         if (client != sender)
-            client->do_TMess(message, 2);
+            recipients.insert(client);
+    }
+    for (auto client : recipients)
+    {
+        client->do_TMess(message, 2);
     }
 }
 
@@ -309,8 +316,9 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
             this->broadcastMessage(requester, kickMsg); // Notify all others
             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
 
-            clientsInChannel.erase(it); // Remove from channel
-            --info.currentClientCount;  // Decrement user count
+            clientsInChannel.erase(it);        // Remove from channel members
+            removeOperatorsInChannel(target);   // Remove operator status if any
+            --info.currentClientCount;         // Decrement member count
             break;
         }
     }

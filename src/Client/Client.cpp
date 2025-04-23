@@ -13,28 +13,34 @@ Client::~Client(){
 };
 
 void Client::setHostname(){
-    int sucseed1;
-    char arrayhost[1025];
-    struct sockaddr_in *addr = reinterpret_cast<struct sockaddr_in *>(Cl_addr);
-    sucseed1 = getnameinfo(reinterpret_cast<sockaddr *>(addr), sizeof(sockaddr_in), arrayhost, sizeof(arrayhost),NULL, 0, 0);
-    if (sucseed1 != 0)
-    {
-        std::cerr << "\033[31m Error: There is problem with Host name \033[0m\n";
-        this->Cl_str_info.hostname = "Unrecognized";
+    // Retrieve peer address and convert to numeric hostname
+    struct sockaddr_storage addr;
+    socklen_t len = sizeof(addr);
+    int sockfd = this->getUserFd();
+    if (getpeername(sockfd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
+        this->Cl_str_info.hostname = "unknown";
+        return;
     }
-    this->Cl_str_info.hostname = arrayhost;
+    char hostbuf[NI_MAXHOST];
+    int err = getnameinfo(reinterpret_cast<sockaddr*>(&addr), len,
+                          hostbuf, sizeof(hostbuf),
+                          NULL, 0, NI_NUMERICHOST);
+    if (err != 0) {
+        this->Cl_str_info.hostname = "unknown";
+    } else {
+        this->Cl_str_info.hostname = hostbuf;
+    }
 };
 
 // int[3] 0: password, 1: iswelcome, 2: file descriptor
-Client::Client(int CL_int_info[3], struct add_sock *Cl_addr){
-    this->Cl_int_info[0] = 0;
-    this->Cl_int_info[1] = 0;
-    this->Cl_int_info[2] = CL_int_info[2];
-    this->Cl_str_info.server = "IRCserv";
-    this->Cl_addr = Cl_addr;
-    
-    setHostname();
-};
+// Construct client from socket descriptor
+Client::Client(int socketFd) {
+    // 0: PASS flag, 1: welcome flag, 2: socket descriptor
+    Cl_int_info[0] = 0;
+    Cl_int_info[1] = 0;
+    Cl_int_info[2] = socketFd;
+    Cl_str_info.server = "IRCserv";
+}
 
 // Getters
 int Client::getCl_int_info(int index){

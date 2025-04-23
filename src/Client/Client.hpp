@@ -24,12 +24,13 @@ class Client{
             std::string SendingMessage;
         }Cl_str_info;
 
-        add_sock *Cl_addr;
+        // peer address not stored; hostname will be looked up via getpeername()
 
     public:
         Client();
         ~Client();
-        Client(int CL_int_info[3], struct add_sock *Cl_addr);
+        // Construct client from accepted socket descriptor
+        Client(int socketFd);
         // Client(Client const &src);
         // Client &operator=(Client const &src);
         // getters and setters
@@ -50,17 +51,6 @@ class Client{
         // clear-> Type 1
         void do_NoMess(int Type);
 
-        // Convenience methods for commands
-        // Get the client's nickname
-        std::string getNickname();
-        // Send a raw reply message to the client
-        void sendReply(const std::string &message);
-
-        // Convenience methods for commands
-        // Get the client's nickname
-        std::string getNickname();
-        // Send a raw reply message to the client
-        void sendReply(const std::string &message);
        
 };
 

@@ -5,7 +5,7 @@
 #include <vector>
 
 // Handle the IRC PART command
-void Server::handlePART(Client* user, std::istringstream& iss, const std::string& line) {
+void Server::handlePART(Client* client, std::istringstream& iss, const std::string& line) {
   std::string chlist;
   iss >> chlist;
   std::string comment;
@@ -13,7 +13,7 @@ void Server::handlePART(Client* user, std::istringstream& iss, const std::string
   if (posc != std::string::npos)
     comment = line.substr(posc + 2);
   if (chlist.empty()) {
-    user->sendReply("461 PART :Not enough parameters");
+    client->do_TMess("461 PART :Not enough parameters", 2);
     return;
   }
   std::istringstream pcs(chlist);
@@ -23,12 +23,12 @@ void Server::handlePART(Client* user, std::istringstream& iss, const std::string
       if (listOfChannels[j].first == cname) {
         Channel* chan = listOfChannels[j].second;
         std::string partMsg = 
-          ":" + user->getNickname() + "!" + user->getNickname() +
-          "@" + user->getCl_str_info(2) + " PART " + cname +
+          ":" + client->getCl_str_info(1) + "!" + client->getCl_str_info(1) +
+          "@" + client->getCl_str_info(2) + " PART " + cname +
           (comment.empty() ? "" : " :" + comment);
-        chan->broadcastMessage(user, partMsg);
-        user->sendReply(partMsg);
-        chan->removeClientsInChannel(user->getNickname());
+        chan->broadcastMessage(client, partMsg);
+        client->do_TMess(partMsg, 2);
+        chan->removeClientsInChannel(client->getCl_str_info(1));
         if (chan->getChannelDetail(CURRENT_CLIENT_COUNT) == "0") {
           delete chan;
           listOfChannels.erase(listOfChannels.begin() + j);

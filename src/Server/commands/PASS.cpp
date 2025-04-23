@@ -4,15 +4,15 @@
 #include <string>
 
 // Handle the IRC PASS command
-void Server::handlePASS(Client* user, std::istringstream& iss, const std::string& /*line*/) {
+void Server::handlePASS(Client* client, std::istringstream& iss, const std::string& /*line*/) {
   std::string pass;
   iss >> pass;
-  if (user->getCl_int_info(0)) {
-    user->sendReply("462 You may not reregister");
+  if (client->getCl_int_info(0)) {
+    client->do_TMess("462 You may not reregister", 2);
   } else if (pass != passwordValue) {
-    user->sendReply("464 :Password incorrect");
-    disconnectUnauthenticatedClient(user);
+    client->do_TMess("464 :Password incorrect", 2);
+    disconnectUnauthenticatedClient(client);
   } else {
-    user->setCl_int_info(0, 1);
+    client->setCl_int_info(0, 1);
   }
 }

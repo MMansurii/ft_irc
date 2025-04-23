@@ -8,7 +8,7 @@
 
 - Supports multiple clients using non-blocking sockets
 - Implements core IRC commands (JOIN, PART, PRIVMSG, KICK, etc.)
-- Manages user authentication and nicknames
+- Manages client authentication and nicknames
 - Allows channel creation and moderation
 - Handles client disconnections and errors gracefully
 
@@ -23,7 +23,7 @@
 ### Clone Repository
 
 ```sh
-git clone https://github.com/yourusername/ft_irc.git
+git clone https://github.com/yourclientname/ft_irc.git
 cd ft_irc
 ```
 
@@ -91,7 +91,7 @@ This project is licensed under the MIT License.
 
 ## Authors
 
-- **Your Name** - [GitHub Profile](https://github.com/yourusername)
+- **Your Name** - [GitHub Profile](https://github.com/yourclientname)
 
 ## References
 

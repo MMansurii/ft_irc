@@ -3,13 +3,13 @@
 #include <string>
 
 // Handle the IRC CAP command
-void Server::handleCAP(Client *user, std::istringstream &iss,
+void Server::handleCAP(Client *client, std::istringstream &iss,
                        const std::string & /*line*/) {
   std::string sub;
   iss >> sub;
-  std::string srv = user->getCl_str_info(4);
+  std::string srv = client->getCl_str_info(4);
   if (sub == "LS") {
-    user->sendReply(std::string(":") + srv + " CAP * LS :multi-prefix");
+    client->do_TMess(std::string(":") + srv + " CAP * LS :multi-prefix", 2);
   } else if (sub == "REQ") {
     std::string caps;
     std::getline(iss, caps);
@@ -18,9 +18,9 @@ void Server::handleCAP(Client *user, std::istringstream &iss,
     if (!caps.empty() && caps[0] == ':')
       caps.erase(0, 1);
     if (caps == "multi-prefix") {
-      user->sendReply(std::string(":") + srv + " CAP * ACK :" + caps);
+      client->do_TMess(std::string(":") + srv + " CAP * ACK :" + caps, 2);
     } else {
-      user->sendReply(std::string(":") + srv + " CAP * NAK :" + caps);
+      client->do_TMess(std::string(":") + srv + " CAP * NAK :" + caps, 2);
     }
   }
 }

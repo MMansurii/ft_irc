@@ -4,8 +4,8 @@
 #include <string>
 
 // Handle the IRC PING command
-void Server::handlePING(Client* user, std::istringstream& iss, const std::string& /*line*/) {
+void Server::handlePING(Client* client, std::istringstream& iss, const std::string& /*line*/) {
   std::string token;
   iss >> token;
-  user->sendReply("PONG " + token);
+  client->do_TMess("PONG " + token, 2);
 }

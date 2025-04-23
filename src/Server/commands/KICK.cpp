@@ -2,9 +2,9 @@
 #include "../Server.hpp"
 #include <sstream>
 #include <string>
-+
+
 // Handle the IRC KICK command (channel operator only)
-void Server::handleKICK(Client* user, std::istringstream& iss, const std::string& line) {
+void Server::handleKICK(Client* client, std::istringstream& iss, const std::string& line) {
     std::string channelName, target;
     iss >> channelName >> target;
     std::string comment;
@@ -12,7 +12,7 @@ void Server::handleKICK(Client* user, std::istringstream& iss, const std::string
     if (pos != std::string::npos)
         comment = line.substr(pos + 2);
     if (channelName.empty() || target.empty()) {
-        user->sendReply("461 KICK :Not enough parameters");
+        client->do_TMess("461 KICK :Not enough parameters", 2);
         return;
     }
     Channel* chan = nullptr;
@@ -23,22 +23,22 @@ void Server::handleKICK(Client* user, std::istringstream& iss, const std::string
         }
     }
     if (!chan) {
-        user->sendReply("403 " + user->getNickname() + " " + channelName + " :No such channel");
+        client->do_TMess("403 " + client->getCl_str_info(1) + " " + channelName + " :No such channel", 2);
         return;
     }
-    if (!chan->isUserInChannel(user->getNickname())) {
-        user->sendReply("442 " + user->getNickname() + " " + channelName + " :You're not on that channel");
+    if (!chan->isClientInChannel(client->getCl_str_info(1))) {
+        client->do_TMess("442 " + client->getCl_str_info(1) + " " + channelName + " :You're not on that channel", 2);
         return;
     }
-    if (!chan->isOperatorInChannel(user->getNickname())) {
-        user->sendReply("482 " + user->getNickname() + " " + channelName + " :You're not channel operator");
+    if (!chan->isOperatorInChannel(client->getCl_str_info(1))) {
+        client->do_TMess("482 " + client->getCl_str_info(1) + " " + channelName + " :You're not channel operator", 2);
         return;
     }
-    if (!chan->isUserInChannel(target)) {
-        user->sendReply("441 " + user->getNickname() + " " + target + " " + channelName + " :They aren't on that channel");
+    if (!chan->isClientInChannel(target)) {
+        client->do_TMess("441 " + client->getCl_str_info(1) + " " + target + " " + channelName + " :They aren't on that channel", 2);
         return;
     }
     if (comment.empty())
-        comment = user->getNickname();
-    chan->handleKickCommand(user, target, comment);
+        comment = client->getCl_str_info(1);
+    chan->handleKickCommand(client, target, comment);
 }

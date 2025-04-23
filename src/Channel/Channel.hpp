@@ -54,12 +54,12 @@ class Channel
         Client *findOperatorByNickname(const std::string &nickname);
         Client *findClientByNickname(const std::string &nickname);
 
-        int isUserInChannel(const std::string &nickname);
+        int isClientInChannel(const std::string &nickname);
         int isOperatorInChannel(const std::string &nickname);
         int isClientInvited(const std::string &nickname);
 
         void addInvitedGuest(Client *newGuest);
-        void sendUserListToClient(Client *client);
+        void sendClientListToClient(Client *client);
         std::string attemptJoinChannel( Client *client, const std::string &providedKey);
         void removeInvitedClient(const std::string &clientNickname);
         void removeClientsInChannel(const std::string& clientNickname);
@@ -73,7 +73,7 @@ class Channel
         void updateTopicRestrictionMode(Client *client, int flag);
         void updateChannelKeyMode(Client *client, const std::string &rawArgs, int argIndex, int flag);
         void toggleOperatorStatus(Client *client, const std::string& rawArgs, int argIndex, int flag);
-        void updateUserLimit(Client *client, const std::string &rawArgs, int argIndex, int flag);
+        void updateClientLimit(Client *client, const std::string &rawArgs, int argIndex, int flag);
         void displayMemberListToClient(Client *client);
         void applyChannelModes(Client *client, const std::string &modes, std::string modeArgs);
         int validateModeArguments(const std::string &modes, std::string modeArgs);

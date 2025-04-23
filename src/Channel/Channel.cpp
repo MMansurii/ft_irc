@@ -103,7 +103,7 @@ Client *Channel::findClientByNickname(const std::string &nickname)
     return nullptr;
 }
 
-int Channel::isUserInChannel(const std::string &nickname)
+int Channel::isClientInChannel(const std::string &nickname)
 {
     for (auto &client : clientsInChannel)
     {
@@ -117,9 +117,9 @@ int Channel::isUserInChannel(const std::string &nickname)
 
 int Channel::isOperatorInChannel(const std::string &nickname)
 {
-    for (auto &operatorUser : operatorsInChannel)
+    for (auto &operatorClient : operatorsInChannel)
     {
-        if (operatorUser->getCl_str_info(1) == nickname)
+        if (operatorClient->getCl_str_info(1) == nickname)
         {
             return 1;
         }
@@ -129,9 +129,9 @@ int Channel::isOperatorInChannel(const std::string &nickname)
 
 int Channel::isClientInvited(const std::string &nickname)
 {
-    for (auto &invitedUser : this->invitedClients)
+    for (auto &invitedClient : this->invitedClients)
     {
-        if (invitedUser->getCl_str_info(1) == nickname)
+        if (invitedClient->getCl_str_info(1) == nickname)
         {
             return 1;
         }
@@ -144,36 +144,36 @@ void Channel::addInvitedGuest(Client *newGuest)
     this->invitedClients.push_back(newGuest);
 }
 
-void Channel::sendUserListToClient(Client *client)
+void Channel::sendClientListToClient(Client *client)
 {
-    // Reply Code 353 (USER_LIST_REPLY): Server sends a list of users in the channel
-    std::string userListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + this->getChannelDetail(CHANNEL_NAME) + " :";
+    // Reply Code 353 (USER_LIST_REPLY): Server sends a list of clients in the channel
+    std::string clientListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + this->getChannelDetail(CHANNEL_NAME) + " :";
 
     bool isFirstOperator = true;
-    for (auto &operatorUser : this->operatorsInChannel)
+    for (auto &operatorClient : this->operatorsInChannel)
     {
         if (!isFirstOperator)
         {
-            userListMessage += ' ';
+            clientListMessage += ' ';
         }
-        userListMessage += '@' + operatorUser->getCl_str_info(1); // Prefix operator nicknames with '@'
+        clientListMessage += '@' + operatorClient->getCl_str_info(1); // Prefix operator nicknames with '@'
         isFirstOperator = false;
     }
 
-    bool isFirstUser = true;
-    for (auto &regularUser : this->clientsInChannel)
+    bool isFirstClient = true;
+    for (auto &regularClient : this->clientsInChannel)
     {
-        if (!isFirstUser)
+        if (!isFirstClient)
         {
-            userListMessage += ' ';
+            clientListMessage += ' ';
         }
-        userListMessage += regularUser->getCl_str_info(1);
-        isFirstUser = false;
+        clientListMessage += regularClient->getCl_str_info(1);
+        isFirstClient = false;
     }
 
-    client->do_TMess(userListMessage, 2);
+    client->do_TMess(clientListMessage, 2);
 
-    // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the user list
+    // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the client list
     std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
     client->do_TMess(endOfListMessage, 2);
 }
@@ -246,7 +246,7 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
         this->clientsInChannel.push_back(client);
         this->info.currentClientCount++;
 
-        if (isUserInChannel(client->getCl_str_info(1)))
+        if (isClientInChannel(client->getCl_str_info(1)))
         {
             removeInvitedClient(client->getCl_str_info(1));
         }
@@ -259,24 +259,24 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
     }
 }
 
-std::string Channel::getChannelModes() const
-{
-    std::string modeString = "+";
+// std::string Channel::getChannelModes() const
+// {
+//     std::string modeString = "+";
 
-    if (info.inviteOnly)
-        modeString += "i";
-    if (info.topicRestricted)
-        modeString += "t";
-    if (info.keyRequired)
-        modeString += "k";
+//     if (info.inviteOnly)
+//         modeString += "i";
+//     if (info.topicRestricted)
+//         modeString += "t";
+//     if (info.keyRequired)
+//         modeString += "k";
 
-    if (info.maxClients > 0)
-    {
-        modeString += "l " + std::to_string(info.maxClients);
-    }
+//     if (info.maxClients > 0)
+//     {
+//         modeString += "l " + std::to_string(info.maxClients);
+//     }
 
-    return (modeString == "+") ? "" : modeString;
-}
+//     return (modeString == "+") ? "" : modeString;
+// }
 
 void Channel::broadcastMessage(Client *sender, const std::string &message)
 {
@@ -328,7 +328,7 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
 
             clientsInChannel.erase(it); // Remove from channel
-            --info.currentClientCount;  // Decrement user count
+            --info.currentClientCount;  // Decrement client count
             break;
         }
     }
@@ -445,9 +445,9 @@ void Channel::toggleOperatorStatus(Client *client, const std::string &rawArgs, i
     }
     else if (flag == 1 && isOperatorInChannel(target) == 0)
     {
-        if (isUserInChannel(target) == 0)
+        if (isClientInChannel(target) == 0)
         {
-            std::string errorMessage = "441 " + client->getCl_str_info(0) + ' ' + target + ' ' + info.channelName + ":The user is not in this channel";
+            std::string errorMessage = "441 " + client->getCl_str_info(0) + ' ' + target + ' ' + info.channelName + ":The client is not in this channel";
             client->do_TMess(errorMessage, 2);
             return;
         }
@@ -467,7 +467,7 @@ void Channel::toggleOperatorStatus(Client *client, const std::string &rawArgs, i
     broadcastMessage(client, reply);
 }
 
-void Channel::updateUserLimit(Client *client, const std::string &rawArgs, int argIndex, int flag)
+void Channel::updateClientLimit(Client *client, const std::string &rawArgs, int argIndex, int flag)
 {
     if (flag == -1)
     {
@@ -580,7 +580,7 @@ void Channel::applyChannelModes(Client *client, const std::string &modes, std::s
                 argIndex++;
                 break;
             case 'l':
-                updateUserLimit(client, modeArgs, argIndex, flag);
+                updateClientLimit(client, modeArgs, argIndex, flag);
                 argIndex++;
                 break;
             default:

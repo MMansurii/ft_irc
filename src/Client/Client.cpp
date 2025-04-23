@@ -16,7 +16,7 @@ void Client::setHostname(){
     // Retrieve peer address and convert to numeric hostname
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
-    int sockfd = this->getClientFd();
+    int sockfd = this->getCl_int_info(2);
     if (getpeername(sockfd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
         this->Cl_str_info.hostname = "unknown";
         return;

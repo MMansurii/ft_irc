@@ -5,13 +5,13 @@
 #include <string>
 
 // Handle the IRC JOIN command
-void Server::handleJOIN(Client* user, std::istringstream& iss, const std::string& /*line*/) {
+void Server::handleJOIN(Client* client, std::istringstream& iss, const std::string& /*line*/) {
   std::string chlist;
   iss >> chlist;
   std::string key;
   iss >> key;
   if (chlist.empty()) {
-    user->sendReply("461 JOIN :Not enough parameters");
+    client->do_TMess("461 JOIN :Not enough parameters", 2);
     return;
   }
   std::vector<std::string> chans;
@@ -37,21 +37,21 @@ void Server::handleJOIN(Client* user, std::istringstream& iss, const std::string
       }
     }
     if (!chan) {
-      chan = new Channel(chanName, chanKey, user);
+      chan = new Channel(chanName, chanKey, client);
       listOfChannels.push_back(std::make_pair(chanName, chan));
       std::string joinMsg = 
-        ":" + user->getNickname() + "!" + user->getNickname() +
-        "@" + user->getCl_str_info(2) + " JOIN " + chanName;
-      user->sendReply(joinMsg);
-      chan->sendUserListToClient(user);
+        ":" + client->getCl_str_info(1) + "!" + client->getCl_str_info(1) +
+        "@" + client->getCl_str_info(2) + " JOIN " + chanName;
+      client->do_TMess(joinMsg, 2);
+      chan->sendClientListToClient(client);
     } else {
-      std::string res = chan->attemptJoinChannel(user, chanKey);
+      std::string res = chan->attemptJoinChannel(client, chanKey);
       if (!res.empty() && res[0] == ':') {
-        user->sendReply(res);
-        chan->broadcastMessage(user, res);
-        chan->sendUserListToClient(user);
+        client->do_TMess(res, 2);
+        chan->broadcastMessage(client, res);
+        chan->sendClientListToClient(client);
       } else {
-        user->sendReply(res);
+        client->do_TMess(res, 2);
       }
     }
   }

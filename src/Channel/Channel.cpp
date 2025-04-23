@@ -6,7 +6,11 @@ Channel::Channel(const std::string &name, const std::string &key, Client *client
 {
     info.channelName = name;
     info.accessKey = key;
+    // initialize modes: key, invite-only, topic-restriction
     info.keyRequired = !key.empty() ? 1 : 0;
+    info.inviteOnly = 0;
+    info.topicRestricted = 0;
+    // initial member count and settings
     info.currentClientCount = 1;
     info.maxClients = 100;
     info.creationTimestamp = "2025-03-14";
@@ -348,9 +352,10 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
     if (flag != 1 && flag != -1)
         return;
 
+    // set invite-only mode flag
     info.inviteOnly = flag;
-
-    const std::string &nickname = client->getCl_str_info(0);
+    // format prefix: use client nickname
+    const std::string &nickname = client->getCl_str_info(1);
     const std::string modeChange = (flag == 1) ? "+i" : "-i";
     const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
 
@@ -363,9 +368,11 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
     if (flag != 1 && flag != -1)
         return;
 
-    info.inviteOnly = flag;
+    // set topic-restricted mode flag
+    info.topicRestricted = flag;
 
-    const std::string &nickname = client->getCl_str_info(0);
+    // use client nickname for prefix
+    const std::string &nickname = client->getCl_str_info(1);
     const std::string modeChange = (flag == 1) ? "+t" : "-t";
     const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
 

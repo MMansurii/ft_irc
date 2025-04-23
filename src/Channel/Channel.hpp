@@ -2,7 +2,7 @@
 #define CHANNEL_HPP
 #include <iostream>
 #include <list>
-#include "Client.hpp"
+#include "Client/Client.hpp"
 #include <sstream>
 
 

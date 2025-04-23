@@ -33,7 +33,24 @@ endef
 export FT_IRC_BANNER
 
 NAME                = ircserv
-SRCS                = main.cpp src/utils4main.cpp
+SRCS                = main.cpp \
+                      src/utils4main.cpp \
+                      src/Server/Server.cpp \
+                      src/Server/commands/CAP.cpp \
+                      src/Server/commands/JOIN.cpp \
+                      src/Server/commands/NICK.cpp \
+                      src/Server/commands/PART.cpp \
+                      src/Server/commands/PASS.cpp \
+                      src/Server/commands/PING.cpp \
+                      src/Server/commands/PRIVMSG.cpp \
+                      src/Server/commands/QUIT.cpp \
+                      src/Server/commands/USER.cpp \
+                      src/Server/commands/KICK.cpp \
+                      src/Server/commands/INVITE.cpp \
+                      src/Server/commands/MODE.cpp \
+                      src/Server/commands/TOPIC.cpp \
+                      src/Client/Client.cpp \
+                      src/Channel/Channel.cpp
 CFLAGS              = -Wall -Werror -Wextra -std=c++17
 INCLUDE             = -I src/
 OBJS                = $(SRCS:.cpp=.o)
@@ -61,12 +78,10 @@ $(NAME): $(OBJS)
 	@$(CC) $(CFLAGS) $(OBJS) $(INCLUDE) -o $(NAME)
 	@echo "$(GREEN)✓ Created executable: $(WHITE)$(NAME)$(RESET)"
 
-
 %.o: %.cpp
 	@echo -ne "$(CYAN)Compiling $<... $(RESET)"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 	@echo "$(GREEN)✓$(RESET)"
-
 
 clean:
 	@echo "$(RED)Cleaning object files...$(RESET)"
@@ -74,7 +89,7 @@ clean:
 		echo -ne "\r$(RED)Cleaning... $$i $(RESET)"; \
 		sleep 0.1; \
 	done
-	@rm -rf $(OBJS) 
+	@rm -rf $(OBJS) $(OBJS_lexer)
 	@echo -ne "\r$(GREEN)Cleaning... ✓ $(RESET)\n"
 	@echo "$(GREEN)✓ Removed object files$(RESET)"
 

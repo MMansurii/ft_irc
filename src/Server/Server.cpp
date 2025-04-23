@@ -1,3 +1,4 @@
+
 #include "Server.hpp"
 #include "Client/Client.hpp"
 #include <array>
@@ -25,6 +26,7 @@ Server::Server(const std::string &initPort, const std::string &initPassword)
 // Build the mapping from command names to member handler functions
 void Server::setupCommandHandlers() {
   cmdHandlers.clear();
+  cmdHandlers["CAP"] = &Server::handleCAP;
   cmdHandlers["PASS"] = &Server::handlePASS;
   cmdHandlers["NICK"] = &Server::handleNICK;
   cmdHandlers["USER"] = &Server::handleUSER;
@@ -33,6 +35,10 @@ void Server::setupCommandHandlers() {
   cmdHandlers["JOIN"] = &Server::handleJOIN;
   cmdHandlers["PART"] = &Server::handlePART;
   cmdHandlers["PRIVMSG"] = &Server::handlePRIVMSG;
+  cmdHandlers["KICK"] = &Server::handleKICK;
+  cmdHandlers["INVITE"] = &Server::handleINVITE;
+  cmdHandlers["MODE"] = &Server::handleMODE;
+  cmdHandlers["TOPIC"] = &Server::handleTOPIC;
 }
 
 // --> 101
@@ -259,7 +265,7 @@ void Server::handleConnectionIssue(
   terminateClientConnection(descriptor, issueMessage);
 }
 
-// Forcefully removes a user after disconnection or error
+// Forcefully removes a client after disconnection or error
 void Server::terminateClientConnection(
     std::vector<struct pollfd>::iterator descriptor,
     const std::string &message) {
@@ -268,12 +274,12 @@ void Server::terminateClientConnection(
 
   try {
     for (std::vector<std::pair<int, Client *>>::iterator it =
-             listOfUsers.begin();
-         it != listOfUsers.end(); ++it) {
+             listOfClients.begin();
+         it != listOfClients.end(); ++it) {
       if (it->first == descriptor->fd) {
-        detachUserFromAllChannels(it->second);
+        detachClientFromAllChannels(it->second);
         delete it->second;
-        listOfUsers.erase(it);
+        listOfClients.erase(it);
         break;
       }
     }
@@ -328,40 +334,40 @@ void Server::registerClientPollfd(int clientSocket) {
   listOfPollDescriptors.push_back(newPollfd);
 }
 
-// Creates a new User object and registers it
+// Creates a new Client object and registers it
 void Server::createClientInstance(int clientSocket) {
   // Check if this client socket is already registered
-  for (size_t i = 0; i < listOfUsers.size(); ++i) {
-    if (listOfUsers[i].first == clientSocket) {
+  for (size_t i = 0; i < listOfClients.size(); ++i) {
+    if (listOfClients[i].first == clientSocket) {
       std::cerr << "\033[31m[ Duplicate socket FD detected: " << clientSocket
                 << " — Skipping registration ]\033[0m\n";
       return;
     }
   }
 
-  // Create new Client and add to user list
+  // Create new Client and add to client list
   // Create client and resolve hostname
   Client *newClient = new Client(clientSocket);
   // Determine client's hostname for prefix information
   newClient->setHostname();
-  listOfUsers.push_back(std::make_pair(clientSocket, newClient));
+  listOfClients.push_back(std::make_pair(clientSocket, newClient));
 }
 /// end acceptNewClient(); // Incoming client
 // <-- 28
 
 // --> 31
-// reads data from user's socket and stores it in their message buffer
-int Server::receiveClientData(Client *user) {
-  int userSocket = user->getUserFd();
+// reads data from client's socket and stores it in their message buffer
+int Server::receiveClientData(Client *client) {
+  int clientSocket = client->getCl_int_info(2);
   std::string fullMessage;
 
-  int lastBytesRead = readCompleteMessageFromSocket(userSocket, fullMessage);
+  int lastBytesRead = readCompleteMessageFromSocket(clientSocket, fullMessage);
 
-  user->clearMessage();          // Clear old message buffer
-  user->setMessage(fullMessage); // Save the newly received message
+  client->do_NoMess(1);          // Clear old message buffer
+  client->setCl_str_info(5, fullMessage); // Save the newly received message
 
   printSocketReadConfirmation();
-  printUserMessageLog(user, fullMessage);
+  printClientMessageLog(client, fullMessage);
 
   return lastBytesRead; // Return last read size (as in original)
 }
@@ -392,9 +398,9 @@ void Server::printSocketReadConfirmation() {
                "(recv OK)\033[0m\n";
 }
 
-// Displays the incoming message received from a specific user
-void Server::printUserMessageLog(Client *sender, const std::string &content) {
-  std::cout << "\033[33m[ INCOMING MESSAGE ] From: " << sender->getNickname()
+// Displays the incoming message received from a specific client
+void Server::printClientMessageLog(Client *sender, const std::string &content) {
+  std::cout << "\033[33m[ INCOMING MESSAGE ] From: " << sender->getCl_str_info(1)
             << " | Content: " << content << " \033[0m\n\n";
 }
 
@@ -409,19 +415,19 @@ void Server::handleClientCommunication(
   try {
     logReceiveStart();
 
-    Client *user = getUserByFd(pollIterator->fd);
-    if (!user) {
-      logUserNotFound(pollIterator->fd);
+    Client *client = getClientByFd(pollIterator->fd);
+    if (!client) {
+      logClientNotFound(pollIterator->fd);
       return;
     }
 
-    int bytesRead = receiveClientData(user);
+    int bytesRead = receiveClientData(client);
     logByteCount(bytesRead);
 
     if (isDisconnection(bytesRead)) {
-      handleDisconnection(user, *pollIterator, bytesRead);
+      handleDisconnection(client, *pollIterator, bytesRead);
     } else {
-      interpretClientCommand(user);
+      interpretClientCommand(client);
     }
   } catch (const std::out_of_range &error) {
     std::cerr
@@ -432,11 +438,11 @@ void Server::handleClientCommunication(
   }
 }
 
-// Retrieves a user from the active user list by socket file descriptor
-Client *Server::getUserByFd(int fd) {
-  for (size_t i = 0; i < listOfUsers.size(); ++i) {
-    if (listOfUsers[i].first == fd)
-      return listOfUsers[i].second;
+// Retrieves a client from the active client list by socket file descriptor
+Client *Server::getClientByFd(int fd) {
+  for (size_t i = 0; i < listOfClients.size(); ++i) {
+    if (listOfClients[i].first == fd)
+      return listOfClients[i].second;
   }
   return nullptr;
 }
@@ -446,11 +452,11 @@ void Server::logReceiveStart() {
   std::cout << "\033[34m[ --> Receiving data ]\033[0m\n";
 }
 
-// Checks if the user has disconnected (recv returned <= 0)
+// Checks if the client has disconnected (recv returned <= 0)
 bool Server::isDisconnection(int bytesRead) { return bytesRead <= 0; }
 
-// Handles a user's disconnection scenario
-void Server::handleDisconnection(Client *user, struct pollfd &pollEntry,
+// Handles a client's disconnection scenario
+void Server::handleDisconnection(Client *client, struct pollfd &pollEntry,
                                  int resultCode) {
   if (resultCode == 0)
     std::cerr << "\033[31m[ Notice: Client hung up ]\033[0m\n";
@@ -458,12 +464,12 @@ void Server::handleDisconnection(Client *user, struct pollfd &pollEntry,
     std::cerr
         << "\033[31m[ Error: recv() failure during communication ]\033[0m\n";
 
-  terminateUserSession(user, pollEntry);
+  terminateClientSession(client, pollEntry);
 }
 
-// Logs if user was not found
-void Server::logUserNotFound(int fd) {
-  std::cerr << "\033[31m[ Error: No user found for socket fd: " << fd
+// Logs if client was not found
+void Server::logClientNotFound(int fd) {
+  std::cerr << "\033[31m[ Error: No client found for socket fd: " << fd
             << " ]\033[0m\n";
 }
 
@@ -481,21 +487,21 @@ void Server::shutdownGracefully() {
   std::cerr << "\n\033[33m[ Server has been shut down safely ]\033[0m\n";
 }
 
-// Frees users, closes fds, and clears tracking lists
-// Disconnect and clean all users, file descriptors, and channels
+// Frees clients, closes fds, and clears tracking lists
+// Disconnect and clean all clients, file descriptors, and channels
 void Server::cleanupAllResources() {
-  clearAllUsers();
+  clearAllClients();
   closeAllPollDescriptors();
   deleteAllChannels();
 }
 
-// Delete all User objects and close their sockets
-void Server::clearAllUsers() {
-  for (size_t i = 0; i < listOfUsers.size(); ++i) {
-    close(listOfUsers[i].first);
-    delete listOfUsers[i].second;
+// Delete all Client objects and close their sockets
+void Server::clearAllClients() {
+  for (size_t i = 0; i < listOfClients.size(); ++i) {
+    close(listOfClients[i].first);
+    delete listOfClients[i].second;
   }
-  listOfUsers.clear();
+  listOfClients.clear();
 }
 
 // Close all poll file descriptors
@@ -517,23 +523,23 @@ void Server::deleteAllChannels() {
 // <-- 59
 
 // --> 61
-void Server::terminateUserSession(Client *userObj, struct pollfd &pollEntry) {
+void Server::terminateClientSession(Client *clientObj, struct pollfd &pollEntry) {
 
-  detachUserFromAllChannels(userObj); // remove from channels
-  removeUserByPollfd(pollEntry);
+  detachClientFromAllChannels(clientObj); // remove from channels
+  removeClientByPollfd(pollEntry);
 }
 
-// Detaches the given user from all IRC channels and removes empty channels
-void Server::detachUserFromAllChannels(Client *userPtr) {
-  std::string userNick = userPtr->getNickname();
+// Detaches the given client from all IRC channels and removes empty channels
+void Server::detachClientFromAllChannels(Client *clientPtr) {
+  std::string clientNick = clientPtr->getCl_str_info(1);
   for (std::vector<std::pair<std::string, Channel *>>::iterator it =
            listOfChannels.begin();
        it != listOfChannels.end();) {
     Channel *chan = it->second;
-    // Remove user from all channel role lists
-    chan->removeClientsInChannel(userNick);
-    chan->removeOperatorsInChannel(userNick);
-    chan->removeInvitedClient(userNick);
+    // Remove client from all channel role lists
+    chan->removeClientsInChannel(clientNick);
+    chan->removeOperatorsInChannel(clientNick);
+    chan->removeInvitedClient(clientNick);
     // If channel is empty, delete it
     std::string count = chan->getChannelDetail(CURRENT_CLIENT_COUNT);
     if (count == "0") {
@@ -548,36 +554,36 @@ void Server::detachUserFromAllChannels(Client *userPtr) {
 // <-- 61
 
 // --> 63
-// --> method that deletes a user based on their pollfd struct
-void Server::removeUserByPollfd(struct pollfd &socketEntry) {
+// --> method that deletes a client based on their pollfd struct
+void Server::removeClientByPollfd(struct pollfd &socketEntry) {
   try {
     int socketId = socketEntry.fd;
-    std::cout << "\033[32m[ Removing user with socket fd: " << socketId
+    std::cout << "\033[32m[ Removing client with socket fd: " << socketId
               << " ]\033[0m\n";
 
-    Client *targetUser = findUserBySocket(socketId);
-    if (!targetUser) {
-      std::cerr << "\033[31m[ No user found for socket fd: " << socketId
+    Client *targetClient = findClientBySocket(socketId);
+    if (!targetClient) {
+      std::cerr << "\033[31m[ No client found for socket fd: " << socketId
                 << " ]\033[0m\n";
       return;
     }
 
     closeSocketAndErasePollfd(socketId);
-    eraseUserFromUserList(socketId);
+    eraseClientFromClientList(socketId);
 
-    std::cerr << "\033[31m[ User disconnected on socket: " << socketId
+    std::cerr << "\033[31m[ Client disconnected on socket: " << socketId
               << " ]\033[0m\n";
   } catch (const std::exception &ex) {
-    std::cerr << "\033[31m[ Exception during user removal: " << ex.what()
+    std::cerr << "\033[31m[ Exception during client removal: " << ex.what()
               << " ]\033[0m\n";
   }
 }
 
-// Searches for a user object given its socket ID
-Client *Server::findUserBySocket(int socketId) {
-  for (size_t i = 0; i < listOfUsers.size(); ++i) {
-    if (listOfUsers[i].first == socketId) {
-      return listOfUsers[i].second;
+// Searches for a client object given its socket ID
+Client *Server::findClientBySocket(int socketId) {
+  for (size_t i = 0; i < listOfClients.size(); ++i) {
+    if (listOfClients[i].first == socketId) {
+      return listOfClients[i].second;
     }
   }
   return nullptr;
@@ -596,12 +602,12 @@ void Server::closeSocketAndErasePollfd(int socketId) {
   }
 }
 
-// Deletes the user object and removes it from the user list
-void Server::eraseUserFromUserList(int socketId) {
-  for (size_t i = 0; i < listOfUsers.size(); ++i) {
-    if (listOfUsers[i].first == socketId) {
-      delete listOfUsers[i].second;
-      listOfUsers.erase(listOfUsers.begin() + i);
+// Deletes the client object and removes it from the client list
+void Server::eraseClientFromClientList(int socketId) {
+  for (size_t i = 0; i < listOfClients.size(); ++i) {
+    if (listOfClients[i].first == socketId) {
+      delete listOfClients[i].second;
+      listOfClients.erase(listOfClients.begin() + i);
       break;
     }
   }
@@ -613,12 +619,12 @@ void Server::eraseUserFromUserList(int socketId) {
 
 void Server::disconnectUnauthenticatedClient(Client *disconnectedClient) {
   try {
-    disconnectedClient->sendReply("Please, enter PASS first. Disconnecting.");
-    int clientSocket = disconnectedClient->getUserFd();
+    disconnectedClient->do_TMess("Please, enter PASS first. Disconnecting.", 2);
+    int clientSocket = disconnectedClient->getCl_int_info(2);
 
     close(clientSocket);
     removeSocketFromPollList(clientSocket);
-    removeUserEntry(clientSocket);
+    removeClientEntry(clientSocket);
 
     std::cout << "\033[33m[ Unauthenticated client removed: fd " << clientSocket
               << " ]\033[0m\n";
@@ -640,14 +646,14 @@ void Server::removeSocketFromPollList(int clientSocket) {
   }
 }
 
-// finds and removes the user from the active user list by socket
-void Server::removeUserEntry(int clientSocket) {
-  for (std::vector<std::pair<int, Client *>>::iterator userEntry =
-           listOfUsers.begin();
-       userEntry != listOfUsers.end(); ++userEntry) {
-    if (userEntry->first == clientSocket) {
-      delete userEntry->second;
-      listOfUsers.erase(userEntry);
+// finds and removes the client from the active client list by socket
+void Server::removeClientEntry(int clientSocket) {
+  for (std::vector<std::pair<int, Client *>>::iterator clientEntry =
+           listOfClients.begin();
+       clientEntry != listOfClients.end(); ++clientEntry) {
+    if (clientEntry->first == clientSocket) {
+      delete clientEntry->second;
+      listOfClients.erase(clientEntry);
       break;
     }
   }
@@ -656,8 +662,8 @@ void Server::removeUserEntry(int clientSocket) {
 // <-- 67
 
 // Interpret and execute one or more commands from a client's message buffer
-void Server::interpretClientCommand(Client *user) {
-  std::string raw = user->getMessage();
+void Server::interpretClientCommand(Client *client) {
+  std::string raw = client->getCl_str_info(5);
   std::istringstream msgStream(raw);
   std::string line;
   while (std::getline(msgStream, line)) {
@@ -675,15 +681,16 @@ void Server::interpretClientCommand(Client *user) {
     if (it != cmdHandlers.end()) {
       bool preReg =
           (cmd == "CAP" || cmd == "PASS" || cmd == "NICK" || cmd == "USER");
-      if (!preReg && !user->getCl_int_info(1)) {
-        user->sendReply("451 :You have not registered");
+      if (!preReg && !client->getCl_int_info(1)) {
+        client->do_TMess("451 :You have not registered", 2);
         continue;
       }
-      (this->*it->second)(user, iss, line);
+      (this->*it->second)(client, iss, line);
       if (cmd == "QUIT")
         break;
     } else {
-      user->sendReply("Unknown command: " + cmd);
+      client->do_TMess("Unknown command: " + cmd, 2);
     }
   }
 }
+// End of Server.cpp

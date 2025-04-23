@@ -16,7 +16,7 @@ class Client{
         int Cl_int_info[3];
 
         struct Cl_str_info{
-            std::string username;
+            std::string clientname;
             std::string nickname;
             std::string hostname;
             std::string realname;

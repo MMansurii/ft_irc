@@ -7,13 +7,13 @@
 #include <cstring>
 #include <ctime>
 #include <errno.h>
-#include <functional>
 #include <iostream>
 #include <map>
 #include <netdb.h>
 #include <poll.h>
-#include <sstream>
 #include <string>
+#include <sstream>
+#include <functional>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -61,70 +61,64 @@ private:
   // --- Client Communication ---
   void
   handleClientCommunication(std::vector<struct pollfd>::iterator descriptor);
-  Client *getUserByFd(int fd);
+  Client *getClientByFd(int fd);
   void logReceiveStart();
   bool isDisconnection(int bytesRead);
-  void handleDisconnection(Client *user, struct pollfd &pollEntry,
+  void handleDisconnection(Client *client, struct pollfd &pollEntry,
                            int resultCode);
-  void logUserNotFound(int fd);
+  void logClientNotFound(int fd);
   void logByteCount(int bytes);
 
   // --- Socket Reading ---
-  int receiveClientData(Client *user);
+  int receiveClientData(Client *client);
   int readCompleteMessageFromSocket(int socketFd, std::string &outputMessage);
   void printSocketReadConfirmation();
-  void printUserMessageLog(Client *sender, const std::string &content);
+  void printClientMessageLog(Client *sender, const std::string &content);
 
   // Command dispatch: map IRC verb to handler
-  typedef void (Server::*CmdHandler)(Client *user, std::istringstream &iss,
-                                     const std::string &line);
+  typedef void (Server::*CmdHandler)(Client* client, std::istringstream& iss, const std::string& line);
   std::map<std::string, CmdHandler> cmdHandlers;
   // Populate cmdHandlers map
   void setupCommandHandlers();
   // Individual command handlers
-  void handleCAP(Client *user, std::istringstream &iss,
-                 const std::string &line);
-  void handlePASS(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handleNICK(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handleUSER(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handlePING(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handleQUIT(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handleJOIN(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handlePART(Client *user, std::istringstream &iss,
-                  const std::string &line);
-  void handlePRIVMSG(Client *user, std::istringstream &iss,
-                     const std::string &line);
+  void handleCAP(Client* client, std::istringstream& iss, const std::string& line);
+  void handlePASS(Client* client, std::istringstream& iss, const std::string& line);
+  void handleNICK(Client* client, std::istringstream& iss, const std::string& line);
+  void handleUSER(Client* client, std::istringstream& iss, const std::string& line);
+  void handlePING(Client* client, std::istringstream& iss, const std::string& line);
+  void handleQUIT(Client* client, std::istringstream& iss, const std::string& line);
+  void handleJOIN(Client* client, std::istringstream& iss, const std::string& line);
+  void handlePART(Client* client, std::istringstream& iss, const std::string& line);
+  void handlePRIVMSG(Client* client, std::istringstream& iss, const std::string& line);
+  void handleKICK(Client* client, std::istringstream& iss, const std::string& line);
+  void handleINVITE(Client* client, std::istringstream& iss, const std::string& line);
+  void handleMODE(Client* client, std::istringstream& iss, const std::string& line);
+  void handleTOPIC(Client* client, std::istringstream& iss, const std::string& line);
 
   // Parse and execute a client command
-  void interpretClientCommand(Client *user);
+  void interpretClientCommand(Client *client);
 
   // --- Disconnection & Cleanup ---
   void shutdownGracefully();
   void cleanupAllResources();
-  void clearAllUsers();
+  void clearAllClients();
   void closeAllPollDescriptors();
   void deleteAllChannels();
 
-  // --- User Termination ---
-  void terminateUserSession(Client *userObj, struct pollfd &pollEntry);
-  void removeUserByPollfd(struct pollfd &socketEntry);
-  Client *findUserBySocket(int socketId);
+  // --- Client Termination ---
+  void terminateClientSession(Client *clientObj, struct pollfd &pollEntry);
+  void removeClientByPollfd(struct pollfd &socketEntry);
+  Client *findClientBySocket(int socketId);
   void closeSocketAndErasePollfd(int socketId);
-  void eraseUserFromUserList(int socketId);
+  void eraseClientFromClientList(int socketId);
 
   // --- Channel Detachment ---
-  void detachUserFromAllChannels(Client *userPtr);
+  void detachClientFromAllChannels(Client *clientPtr);
 
   // --- Authentication Failure ---
   void disconnectUnauthenticatedClient(Client *disconnectedClient);
   void removeSocketFromPollList(int clientSocket);
-  void removeUserEntry(int clientSocket);
+  void removeClientEntry(int clientSocket);
 
 private:
   std::string portValue;
@@ -133,7 +127,7 @@ private:
   std::string serverCreatedAt;
 
   std::vector<struct pollfd> listOfPollDescriptors;
-  std::vector<std::pair<int, Client *>> listOfUsers;
+  std::vector<std::pair<int, Client *>> listOfClients;
   std::vector<std::pair<std::string, Channel *>> listOfChannels;
 };
 

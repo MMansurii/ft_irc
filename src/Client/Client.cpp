@@ -16,7 +16,7 @@ void Client::setHostname(){
     // Retrieve peer address and convert to numeric hostname
     struct sockaddr_storage addr;
     socklen_t len = sizeof(addr);
-    int sockfd = this->getUserFd();
+    int sockfd = this->getClientFd();
     if (getpeername(sockfd, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
         this->Cl_str_info.hostname = "unknown";
         return;
@@ -48,7 +48,7 @@ int Client::getCl_int_info(int index){
 };
 
 // struct Cl_str_info{
-//     std::string username;
+//     std::string clientname;
 //     std::string nickname;
 //     std::string hostname;
 //     std::string realname;
@@ -58,7 +58,7 @@ int Client::getCl_int_info(int index){
 
 std::string Client::getCl_str_info(int index){
     if (index == 0)
-        return this->Cl_str_info.username;
+        return this->Cl_str_info.clientname;
     else if (index == 1)
         return this->Cl_str_info.nickname;
     else if (index == 2)
@@ -87,7 +87,7 @@ void Client::setCl_int_info(int index, int value){
 
 void Client::setCl_str_info(int index, std::string value){
     if (index == 0)
-        this->Cl_str_info.username = value;
+        this->Cl_str_info.clientname = value;
     else if (index == 1)
         this->Cl_str_info.nickname = value;
     else if (index == 2)
@@ -111,7 +111,7 @@ void Client::setCl_str_info(int index, std::string value){
 
 
 // struct Cl_str_info{
-//     std::string username;0
+//     std::string clientname;0
 //     std::string nickname;1
 //     std::string hostname;2
 //     std::string realname;3
@@ -126,7 +126,7 @@ void Client::do_TMess(std::string Mymessage, int Type)
             // need more works on this
             Client::setCl_int_info(1, 1);
             // this->Cl_int_info[1] = 1;
-            std::string msg1 = getCl_str_info(1) + " you are welcome to " + getCl_str_info(4) + ", your user name: @" + getCl_str_info(0) + ", host name:" + getCl_str_info(2);
+            std::string msg1 = getCl_str_info(1) + " you are welcome to " + getCl_str_info(4) + ", your client name: @" + getCl_str_info(0) + ", host name:" + getCl_str_info(2);
             Client::do_TMess(msg1, 2);
             std::string msg2 =  getCl_str_info(1) + ", your host name is " + getCl_str_info(4) + ". Server created " + Mymessage;
             Client::do_TMess(msg2, 2);
@@ -143,7 +143,7 @@ void Client::do_TMess(std::string Mymessage, int Type)
                 sucseed = send(this->Cl_int_info[2], &(Mymessage[i]),len-i, 0);
                 if (sucseed == -1)
                 {
-                    std::cerr << "\033[31m Error: There is problem with sending reply message by user \033[0m\n";
+                    std::cerr << "\033[31m Error: There is problem with sending reply message by client \033[0m\n";
                     break;
                 }
                 i=i+sucseed;

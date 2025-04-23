@@ -12,6 +12,8 @@
 #include <netdb.h>
 #include <poll.h>
 #include <string>
+#include <sstream>
+#include <functional>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -72,6 +74,22 @@ private:
   int readCompleteMessageFromSocket(int socketFd, std::string &outputMessage);
   void printSocketReadConfirmation();
   void printUserMessageLog(Client *sender, const std::string &content);
+
+  // Command dispatch: map IRC verb to handler
+  typedef void (Server::*CmdHandler)(Client* user, std::istringstream& iss, const std::string& line);
+  std::map<std::string, CmdHandler> cmdHandlers;
+  // Populate cmdHandlers map
+  void setupCommandHandlers();
+  // Individual command handlers
+  void handleCAP(Client* user, std::istringstream& iss, const std::string& line);
+  void handlePASS(Client* user, std::istringstream& iss, const std::string& line);
+  void handleNICK(Client* user, std::istringstream& iss, const std::string& line);
+  void handleUSER(Client* user, std::istringstream& iss, const std::string& line);
+  void handlePING(Client* user, std::istringstream& iss, const std::string& line);
+  void handleQUIT(Client* user, std::istringstream& iss, const std::string& line);
+  void handleJOIN(Client* user, std::istringstream& iss, const std::string& line);
+  void handlePART(Client* user, std::istringstream& iss, const std::string& line);
+  void handlePRIVMSG(Client* user, std::istringstream& iss, const std::string& line);
 
   // Parse and execute a client command
   void interpretClientCommand(Client *user);

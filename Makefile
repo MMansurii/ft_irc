@@ -33,7 +33,20 @@ endef
 export FT_IRC_BANNER
 
 NAME                = ircserv
-SRCS                = main.cpp src/utils4main.cpp
+SRCS                = main.cpp \
+                      src/utils4main.cpp \
+                      src/Server/Server.cpp \
+                      src/Server/commands/CAP.cpp \
+                      src/Server/commands/JOIN.cpp \
+                      src/Server/commands/NICK.cpp \
+                      src/Server/commands/PART.cpp \
+                      src/Server/commands/PASS.cpp \
+                      src/Server/commands/PING.cpp \
+                      src/Server/commands/PRIVMSG.cpp \
+                      src/Server/commands/QUIT.cpp \
+                      src/Server/commands/USER.cpp \
+                      src/Client/Client.cpp \
+                      src/Channel/Channel.cpp
 CFLAGS              = -Wall -Werror -Wextra -std=c++17
 INCLUDE             = -I src/
 OBJS                = $(SRCS:.cpp=.o)
@@ -61,28 +74,10 @@ $(NAME): $(OBJS)
 	@$(CC) $(CFLAGS) $(OBJS) $(INCLUDE) -o $(NAME)
 	@echo "$(GREEN)✓ Created executable: $(WHITE)$(NAME)$(RESET)"
 
-SRC_lexer           = maintest.cpp src/utils4main.cpp src/Server/Server.cpp src/Lexer/Lexer.cpp src/Parser/Parser.cpp src/command/Command_monitor.cpp src/command/Join.cpp src/command/Nick.cpp src/command/Ping.cpp src/command/Quit.cpp src/command/User.cpp src/command/Cap.cpp  src/command/Pass.cpp src/command/Privmsg.cpp
-OBJS_lexer          = $(SRC_lexer:.cpp=.o)
-INCLUDE_lexer       = -I src/
-
 %.o: %.cpp
 	@echo -ne "$(CYAN)Compiling $<... $(RESET)"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 	@echo "$(GREEN)✓$(RESET)"
-
-lexer: pre_lexer $(OBJS_lexer)
-	@echo "$(YELLOW)Linking lexer objects...$(RESET)"
-	@for i in $(LOADING_CHARS); do \
-		echo -ne "\r$(YELLOW)Linking... $$i $(RESET)"; \
-		sleep 0.1; \
-	done
-	@echo -ne "\r$(GREEN)Linking... ✓ $(RESET)\n"
-	@$(CC) $(CFLAGS) $(OBJS_lexer) $(INCLUDE_lexer) -o parser
-	@echo "$(GREEN)✓ Created parser utility: $(WHITE)parser$(RESET)"
-
-pre_lexer:
-	@echo "$(BLUE)Building lexer components...$(RESET)"
-	@sleep 0.5
 
 clean:
 	@echo "$(RED)Cleaning object files...$(RESET)"

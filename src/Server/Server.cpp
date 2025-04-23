@@ -23,6 +23,20 @@ Server::Server(const std::string &initPort, const std::string &initPassword)
   runMainLoop();
 }
 
+// Build the mapping from command names to member handler functions
+void Server::setupCommandHandlers() {
+  cmdHandlers.clear();
+  cmdHandlers["CAP"] = &Server::handleCAP;
+  cmdHandlers["PASS"] = &Server::handlePASS;
+  cmdHandlers["NICK"] = &Server::handleNICK;
+  cmdHandlers["USER"] = &Server::handleUSER;
+  cmdHandlers["PING"] = &Server::handlePING;
+  cmdHandlers["QUIT"] = &Server::handleQUIT;
+  cmdHandlers["JOIN"] = &Server::handleJOIN;
+  cmdHandlers["PART"] = &Server::handlePART;
+  cmdHandlers["PRIVMSG"] = &Server::handlePRIVMSG;
+}
+
 // --> 101
 // initialize and configure the server socket
 void Server::startServer() {
@@ -659,245 +673,20 @@ void Server::interpretClientCommand(Client *user) {
     if (cmd.empty())
       continue;
 
-    // CAP negotiation (irssi expects CAP LS/END)
-    if (cmd == "CAP") {
-      std::string sub;
-      iss >> sub;
-      std::string srv = user->getCl_str_info(4);
-      if (sub == "LS") {
-        // Advertise multi-prefix support
-        user->sendReply(std::string(":") + srv + " CAP * LS :multi-prefix");
-      } else if (sub == "REQ") {
-        // Acknowledge requested capabilities if supported
-        std::string caps;
-        std::getline(iss, caps);
-        // trim leading spaces and ':'
-        if (!caps.empty() && caps[0] == ' ')
-          caps.erase(0, 1);
-        if (!caps.empty() && caps[0] == ':')
-          caps.erase(0, 1);
-        if (caps == "multi-prefix") {
-          user->sendReply(std::string(":") + srv + " CAP * ACK :" + caps);
-        } else {
-          user->sendReply(std::string(":") + srv + " CAP * NAK :" + caps);
-        }
-      }
-      // CAP END or other subcommands: no action
-      continue;
-    }
-    // PASS: set password
-    if (cmd == "PASS") {
-      std::string pass;
-      iss >> pass;
-      if (user->getCl_int_info(0)) {
-        user->sendReply("462 You may not reregister");
-      } else if (pass != passwordValue) {
-        user->sendReply("464 :Password incorrect");
-        disconnectUnauthenticatedClient(user);
-      } else {
-        user->setCl_int_info(0, 1);
-      }
-      continue;
-    }
-    // NICK: set nickname
-    else if (cmd == "NICK") {
-      std::string nick;
-      iss >> nick;
-      if (nick.empty()) {
-        user->sendReply("431 :No nickname given");
+    auto it = cmdHandlers.find(cmd);
+    if (it != cmdHandlers.end()) {
+      bool preReg =
+          (cmd == "CAP" || cmd == "PASS" || cmd == "NICK" || cmd == "USER");
+      if (!preReg && !user->getCl_int_info(1)) {
+        user->sendReply("451 :You have not registered");
         continue;
       }
-      for (size_t i = 0; i < listOfUsers.size(); ++i) {
-        Client *u = listOfUsers[i].second;
-        if (u != user && u->getNickname() == nick) {
-          user->sendReply("433 * " + nick + " :Nickname is already in use");
-          nick.clear();
-          break;
-        }
-      }
-      if (!nick.empty())
-        user->setCl_str_info(1, nick);
-      continue;
+      (this->*it->second)(user, iss, line);
+      if (cmd == "QUIT")
+        break;
+    } else {
+      user->sendReply("Unknown command: " + cmd);
     }
-    // USER: set username and realname, then welcome
-    else if (cmd == "USER") {
-      std::string usernm, mode, unused;
-      size_t pos = line.find(" :");
-      std::string real;
-      if (pos != std::string::npos)
-        real = line.substr(pos + 2);
-      iss >> usernm >> mode >> unused;
-      if (usernm.empty() || real.empty()) {
-        user->sendReply("461 USER :Not enough parameters");
-        continue;
-      }
-      user->setCl_str_info(0, usernm);
-      user->setCl_str_info(3, real);
-      // After PASS, NICK and USER, send standard welcome numerics once
-      if (user->getCl_int_info(0) && !user->getNickname().empty() &&
-          user->getCl_int_info(1) == 0) {
-        std::string nick = user->getNickname();
-        std::string uname = user->getCl_str_info(0);
-        std::string host = user->getCl_str_info(2);
-        std::string srv = user->getCl_str_info(4);
-        user->sendReply(":" + srv + " 001 " + nick +
-                        " :Welcome to the Internet Relay Network " + nick +
-                        "!" + uname + "@" + host);
-        user->sendReply(":" + srv + " 002 " + nick + " :Your host is " + srv +
-                        ", running version ft_irc-1.0");
-        user->sendReply(":" + srv + " 003 " + nick +
-                        " :This server was created " + serverCreatedAt);
-        user->sendReply(":" + srv + " 004 " + nick + " " + srv +
-                        " ft_irc-1.0 oiwszchrbeDF");
-        user->setCl_int_info(1, 1);
-      }
-      continue;
-    }
-    // require registration (PASS+NICK+USER)
-    if (!user->getCl_int_info(1)) {
-      user->sendReply("451 :You have not registered");
-      continue;
-    }
-    // PING -> PONG
-    if (cmd == "PING") {
-      std::string token;
-      iss >> token;
-      user->sendReply("PONG " + token);
-      continue;
-    }
-    // QUIT -> disconnect
-    else if (cmd == "QUIT") {
-      std::string comment;
-      size_t p = line.find(' ');
-      if (p != std::string::npos)
-        comment = line.substr(p + 1);
-      user->sendReply(":" + user->getNickname() + " QUIT " + comment);
-      int fd = user->getUserFd();
-      closeSocketAndErasePollfd(fd);
-      eraseUserFromUserList(fd);
-      break;
-    }
-    // JOIN channel(s)
-    else if (cmd == "JOIN") {
-      std::string chlist;
-      iss >> chlist;
-      std::string key;
-      iss >> key;
-      if (chlist.empty()) {
-        user->sendReply("461 JOIN :Not enough parameters");
-        continue;
-      }
-      std::vector<std::string> chans;
-      std::istringstream cs(chlist);
-      std::string cname;
-      while (std::getline(cs, cname, ','))
-        chans.push_back(cname);
-      std::vector<std::string> keys;
-      if (!key.empty()) {
-        std::istringstream ks(key);
-        std::string kk;
-        while (std::getline(ks, kk, ','))
-          keys.push_back(kk);
-      }
-      for (size_t i = 0; i < chans.size(); ++i) {
-        const std::string &chanName = chans[i];
-        const std::string &chanKey = (i < keys.size() ? keys[i] : "");
-        Channel *chan = NULL;
-        for (size_t j = 0; j < listOfChannels.size(); ++j) {
-          if (listOfChannels[j].first == chanName) {
-            chan = listOfChannels[j].second;
-            break;
-          }
-        }
-        if (!chan) {
-          chan = new Channel(chanName, chanKey, user);
-          listOfChannels.push_back(std::make_pair(chanName, chan));
-          std::string joinMsg = ":" + user->getNickname() + "!" +
-                                user->getNickname() + "@" +
-                                user->getCl_str_info(2) + " JOIN " + chanName;
-          user->sendReply(joinMsg);
-          chan->sendUserListToClient(user);
-        } else {
-          std::string res = chan->attemptJoinChannel(user, chanKey);
-          if (!res.empty() && res[0] == ':') {
-            user->sendReply(res);
-            chan->broadcastMessage(user, res);
-            chan->sendUserListToClient(user);
-          } else {
-            user->sendReply(res);
-          }
-        }
-      }
-      continue;
-    }
-    // PART channel(s)
-    else if (cmd == "PART") {
-      std::string chlist;
-      iss >> chlist;
-      std::string comment;
-      size_t posc = line.find(" :");
-      if (posc != std::string::npos)
-        comment = line.substr(posc + 2);
-      if (chlist.empty()) {
-        user->sendReply("461 PART :Not enough parameters");
-        continue;
-      }
-      std::istringstream pcs(chlist);
-      std::string cname;
-      while (std::getline(pcs, cname, ',')) {
-        for (size_t j = 0; j < listOfChannels.size(); ++j) {
-          if (listOfChannels[j].first == cname) {
-            Channel *chan = listOfChannels[j].second;
-            std::string partMsg = ":" + user->getNickname() + "!" +
-                                  user->getNickname() + "@" +
-                                  user->getCl_str_info(2) + " PART " + cname +
-                                  (comment.empty() ? "" : " :" + comment);
-            chan->broadcastMessage(user, partMsg);
-            user->sendReply(partMsg);
-            chan->removeClientsInChannel(user->getNickname());
-            if (chan->getChannelDetail(CURRENT_CLIENT_COUNT) == "0") {
-              delete chan;
-              listOfChannels.erase(listOfChannels.begin() + j);
-            }
-            break;
-          }
-        }
-      }
-      continue;
-    }
-    // PRIVMSG to user or channel
-    else if (cmd == "PRIVMSG") {
-      std::string target;
-      iss >> target;
-      size_t posm = line.find(" :");
-      std::string content =
-          (posm != std::string::npos ? line.substr(posm + 2) : "");
-      if (target.empty() || content.empty()) {
-        user->sendReply("461 PRIVMSG :Not enough parameters");
-        continue;
-      }
-      std::string full =
-          ":" + user->getNickname() + " PRIVMSG " + target + " :" + content;
-      if (!target.empty() && target[0] == '#') {
-        for (size_t j = 0; j < listOfChannels.size(); ++j) {
-          if (listOfChannels[j].first == target) {
-            listOfChannels[j].second->broadcastMessage(user, full);
-            break;
-          }
-        }
-      } else {
-        for (size_t j = 0; j < listOfUsers.size(); ++j) {
-          Client *u = listOfUsers[j].second;
-          if (u->getNickname() == target) {
-            u->sendReply(full);
-            break;
-          }
-        }
-      }
-      continue;
-    }
-    // unknown command
-    user->sendReply("Unknown command: " + cmd);
   }
 }
 // End of Server.cpp

@@ -5,6 +5,7 @@ Channel::Channel(const std::string &name, const std::string &key, Client *client
 {
     info.channelName = name;
     info.accessKey = key;
+    // initialize modes: key, invite-only, topic-restriction
     info.keyRequired = !key.empty() ? 1 : 0;
     // Initialize channel modes: invite-only and topic restriction off by default
     info.inviteOnly = 0;
@@ -84,11 +85,11 @@ void Channel::setChannelInfo(ChannelDetailType detailType, const std::string &va
     }
 }
 
-Client *Channel::findOperatorByNickname(const std::string &nickname)
+Client *Channel::findOperatorByNickname(const std::string &alias)
 {
     for (auto &op : operatorsInChannel)
     {
-        if (op->getCl_str_info(1) == nickname)
+        if (op->getCl_str_info(1) == alias)
         {
             return op;
         }
@@ -96,11 +97,11 @@ Client *Channel::findOperatorByNickname(const std::string &nickname)
     return nullptr;
 }
 
-Client *Channel::findClientByNickname(const std::string &nickname)
+Client *Channel::findClientByNickname(const std::string &alias)
 {
     for (auto &client : clientsInChannel)
     {
-        if (client->getCl_str_info(1) == nickname)
+        if (client->getCl_str_info(1) == alias)
         {
             return client;
         }
@@ -108,11 +109,11 @@ Client *Channel::findClientByNickname(const std::string &nickname)
     return nullptr;
 }
 
-int Channel::isClientInChannel(const std::string &nickname)
+int Channel::isClientInChannel(const std::string &alias)
 {
     for (auto &client : clientsInChannel)
     {
-        if (client->getCl_str_info(1) == nickname)
+        if (client->getCl_str_info(1) == alias)
         {
             return 1;
         }
@@ -120,11 +121,11 @@ int Channel::isClientInChannel(const std::string &nickname)
     return 0;
 }
 
-int Channel::isOperatorInChannel(const std::string &nickname)
+int Channel::isOperatorInChannel(const std::string &alias)
 {
     for (auto &operatorClient : operatorsInChannel)
     {
-        if (operatorClient->getCl_str_info(1) == nickname)
+        if (operatorClient->getCl_str_info(1) == alias)
         {
             return 1;
         }
@@ -132,11 +133,11 @@ int Channel::isOperatorInChannel(const std::string &nickname)
     return 0;
 }
 
-int Channel::isClientInvited(const std::string &nickname)
+int Channel::isClientInvited(const std::string &alias)
 {
     for (auto &invitedClient : this->invitedClients)
     {
-        if (invitedClient->getCl_str_info(1) == nickname)
+        if (invitedClient->getCl_str_info(1) == alias)
         {
             return 1;
         }
@@ -347,13 +348,67 @@ std::string Channel::getChannelModes() const
     return "+" + flags + oss.str();
 }
 
+// void Channel::broadcastMessage(Client *sender, const std::string &message)
+// {
+//     for (auto client : this->operatorsInChannel)
+//     {
+//         if (client != sender)
+//             client->do_TMess(message, 2);
+//     }
+
+//     for (auto client : this->clientsInChannel)
+//     {
+//         if (client != sender)
+//             client->do_TMess(message, 2);
+//     }
+// }
+
+void Channel::broadcastMessage(Client *sender, const std::string &message)
+{
+    // Collect unique recipients (excluding sender)
+    std::set<Client *> recipients;
+    for (auto client : this->operatorsInChannel)
+    {
+        if (client != sender)
+            recipients.insert(client);
+    }
+    for (auto client : this->clientsInChannel)
+    {
+        if (client != sender)
+            recipients.insert(client);
+    }
+    for (auto client : recipients)
+    {
+        client->do_TMess(message, 2);
+    }
+}
+
+// void Channel::handleKickCommand(Client *requester, const std::string &target, const std::string &comment)
+// {
+//     for (auto cl = clientsInChannel.begin(); cl != clientsInChannel.end(); ++cl)
+//     {
+//         if ((*cl)->getCl_str_info(1) == target)
+//         {
+//             std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
+
+//             this->broadcastMessage(requester, kickMsg); // Notify all others
+//             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
+
+//             clientsInChannel.erase(cl); // Remove from channel
+//             --info.currentClientCount;  // Decrement client count
+//             break;
+//         }
+//     }
+// }
+
 void Channel::handleKickCommand(Client *requester, const std::string &target, const std::string &comment)
 {
     for (auto it = clientsInChannel.begin(); it != clientsInChannel.end(); ++it)
     {
         if ((*it)->getCl_str_info(1) == target)
         {
-            std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
+            // Format KICK message with full client prefix
+            std::string kickMsg = ":" + requester->getCl_str_info(1) + "!" + requester->getCl_str_info(0) + "@" + requester->getCl_str_info(2) + " KICK " + info.channelName + " " + target + " :" + comment;
 
             this->broadcastMessage(requester, kickMsg); // Notify all others
             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
@@ -369,20 +424,35 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
 
 void Channel::broadcastTopicUpdate(Client *client, const std::string &newTopic)
 {
-    const std::string &nickname = client->getCl_str_info(0);
+    const std::string &alias = client->getCl_str_info(0);
     const std::string &server = client->getCl_str_info(4);
 
     info.channelTopic = (newTopic == ":") ? "" : newTopic;
     info.lastTopicChangeTime = std::to_string(time(0));
-    info.topicSetter = nickname;
+    info.topicSetter = alias;
 
-    std::string formatTopicReply = ":" + server + " 332 " + nickname + ' ' + info.channelName + " :" + info.channelTopic;
-    std::string formatTopicWhoTimeReply = ":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime;
+    std::string formatTopicReply = ":" + server + " 332 " + alias + ' ' + info.channelName + " :" + info.channelTopic;
+    std::string formatTopicWhoTimeReply = ":" + server + " 333 " + alias + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime;
     ;
 
     broadcastMessage(client, formatTopicReply);
     broadcastMessage(client, formatTopicWhoTimeReply);
 }
+
+// void Channel::updateInviteOnlyMode(Client *client, int flag)
+// {
+//     if (flag != 1 && flag != -1)
+//         return;
+
+//     info.inviteOnly = flag;
+
+//     const std::string &alias = client->getCl_str_info(0);
+//     const std::string modeChange = (flag == 1) ? "+i" : "-i";
+//     const std::string reply = ":" + alias + " MODE " + info.channelName + " " + modeChange;
+
+//     client->do_TMess(reply, 2);
+//     broadcastMessage(client, reply);
+// }
 
 void Channel::updateInviteOnlyMode(Client *client, int flag)
 {
@@ -394,11 +464,26 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
 
     const std::string &nickname = client->getCl_str_info(0);
     const std::string modeChange = (flag == 1) ? "+i" : "-i";
-    const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
+    const std::string reply = ":" + alias + " MODE " + info.channelName + " " + modeChange;
 
     client->do_TMess(reply, 2);
     broadcastMessage(client, reply);
 }
+
+// void Channel::updateTopicRestrictionMode(Client *client, int flag)
+// {
+//     if (flag != 1 && flag != -1)
+//         return;
+
+//     info.inviteOnly = flag;
+
+//     const std::string &alias = client->getCl_str_info(0);
+//     const std::string modeChange = (flag == 1) ? "+t" : "-t";
+//     const std::string reply = ":" + alias + " MODE " + info.channelName + " " + modeChange;
+
+//     client->do_TMess(reply, 2);
+//     broadcastMessage(client, reply);
+// }
 
 void Channel::updateTopicRestrictionMode(Client *client, int flag)
 {
@@ -408,9 +493,10 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
     // Enable or disable topic-restricted mode (0 off, 1 on)
     info.topicRestricted = (flag == 1) ? 1 : 0;
 
-    const std::string &nickname = client->getCl_str_info(0);
+    // use client alias for prefix
+    const std::string &alias = client->getCl_str_info(1);
     const std::string modeChange = (flag == 1) ? "+t" : "-t";
-    const std::string reply = ":" + nickname + " MODE " + info.channelName + " " + modeChange;
+    const std::string reply = ":" + alias + " MODE " + info.channelName + " " + modeChange;
 
     client->do_TMess(reply, 2);
     broadcastMessage(client, reply);
@@ -418,8 +504,8 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
 
 void Channel::updateChannelKeyMode(Client *client, const std::string &rawArgs, int argIndex, int flag)
 {
-    const std::string &nickname = client->getCl_str_info(0);
-    const std::string modePrefix = ":" + nickname + " MODE " + info.channelName + " ";
+    const std::string &alias = client->getCl_str_info(0);
+    const std::string modePrefix = ":" + alias + " MODE " + info.channelName + " ";
 
     if (flag == -1)
     {
@@ -439,7 +525,7 @@ void Channel::updateChannelKeyMode(Client *client, const std::string &rawArgs, i
         {
             if (arg == "x")
             {
-                std::string sendMessage = ":" + client->getCl_str_info(4) + " 525 " + nickname + ' ' + info.channelName + " :Channel key cannot be 'x'";
+                std::string sendMessage = ":" + client->getCl_str_info(4) + " 525 " + alias + ' ' + info.channelName + " :Channel key cannot be 'x'";
                 client->do_TMess(sendMessage, 2);
                 return;
             }
@@ -557,21 +643,21 @@ void Channel::updateClientLimit(Client *client, const std::string &rawArgs, int 
 void Channel::displayMemberListToClient(Client *client)
 {
     const std::string &server = client->getCl_str_info(4);
-    const std::string &nickname = client->getCl_str_info(1);
+    const std::string &alias = client->getCl_str_info(1);
 
-    for (std::list<Client *>::iterator it = operatorsInChannel.begin(); it != operatorsInChannel.end(); ++it)
+    for (std::list<Client *>::iterator cl = operatorsInChannel.begin(); cl != operatorsInChannel.end(); ++cl)
     {
-        std::string message = ":" + server + " 352 " + nickname + ' ' + info.channelName + ' ' +
-                              (*it)->getCl_str_info(0) + ' ' + (*it)->getCl_str_info(2) + ' ' +
-                              (*it)->getCl_str_info(4) + ' ' + (*it)->getCl_str_info(1) + " @ :0 " + (*it)->getCl_str_info(3);
+        std::string message = ":" + server + " 352 " + alias + ' ' + info.channelName + ' ' +
+                              (*cl)->getCl_str_info(0) + ' ' + (*cl)->getCl_str_info(2) + ' ' +
+                              (*cl)->getCl_str_info(4) + ' ' + (*cl)->getCl_str_info(1) + " @ :0 " + (*cl)->getCl_str_info(3);
         client->do_TMess(message, 2);
     }
 
-    for (std::list<Client *>::iterator it = clientsInChannel.begin(); it != clientsInChannel.end(); ++it)
+    for (std::list<Client *>::iterator cl = clientsInChannel.begin(); cl != clientsInChannel.end(); ++cl)
     {
-        std::string message = ":" + server + " 352 " + nickname + ' ' + info.channelName + ' ' +
-                              (*it)->getCl_str_info(0) + ' ' + (*it)->getCl_str_info(2) + ' ' +
-                              (*it)->getCl_str_info(4) + ' ' + (*it)->getCl_str_info(1) + " H :0 " + (*it)->getCl_str_info(3);
+        std::string message = ":" + server + " 352 " + alias + ' ' + info.channelName + ' ' +
+                              (*cl)->getCl_str_info(0) + ' ' + (*cl)->getCl_str_info(2) + ' ' +
+                              (*cl)->getCl_str_info(4) + ' ' + (*cl)->getCl_str_info(1) + " H :0 " + (*cl)->getCl_str_info(3);
         client->do_TMess(message, 2);
     }
 }
@@ -626,25 +712,63 @@ void Channel::applyChannelModes(Client *client, const std::string &modes, std::s
     }
 }
 
+// int Channel::validateModeArguments(const std::string &modes, std::string modeArgs)
+// {
+//     int givenArgs = 0;
+//     int expectedArgs = 0;
+//     int flag = 0;
+//     std::string currentArg;
+//     size_t pos;
+
+//     // Count actual arguments provided
+//     while (!modeArgs.empty())
+//     {
+//         pos = modeArgs.find(' ');
+//         currentArg = modeArgs.substr(0, pos);
+//         modeArgs.erase(0, (pos == std::string::npos) ? currentArg.length() : currentArg.length() + 1);
+//         givenArgs++;
+//         if (pos == std::string::npos)
+//             break;
+//     }
+
+//     // Determine expected number of arguments based on mode string
+//     if (!modes.empty() && (modes[0] == '+' || modes[0] == '-'))
+//     {
+//         flag = (modes[0] == '+') ? 1 : -1;
+//         for (size_t i = 1; i < modes.size(); ++i)
+//         {
+//             if (modes[i] == '+')
+//                 flag = 1;
+//             else if (modes[i] == '-')
+//                 flag = -1;
+//             else if ((flag == 1 && (modes[i] == 'k' || modes[i] == 'o' || modes[i] == 'l')) ||
+//                      (flag == -1 && modes[i] == 'k' && info.keyRequired == 1))
+//                 expectedArgs++;
+//         }
+//     }
+
+//     return (givenArgs == expectedArgs) ? 1 : 0;
+// }
+
 int Channel::validateModeArguments(const std::string &modes, std::string modeArgs)
 {
     int givenArgs = 0;
     int expectedArgs = 0;
     int flag = 0;
-    std::string currentArg;
     size_t pos;
 
-    // Count actual arguments provided
-    while (!modeArgs.empty())
+    // Count actual arguments provided - converted to for loop
+    for (pos = modeArgs.find(' ');
+         !modeArgs.empty();
+         pos = modeArgs.find(' '))
     {
-        pos = modeArgs.find(' ');
-        currentArg = modeArgs.substr(0, pos);
+        std::string currentArg = modeArgs.substr(0, pos);
         modeArgs.erase(0, (pos == std::string::npos) ? currentArg.length() : currentArg.length() + 1);
         givenArgs++;
         if (pos == std::string::npos)
             break;
     }
-
+    
     // Determine expected number of arguments based on mode string
     if (!modes.empty() && (modes[0] == '+' || modes[0] == '-'))
     {

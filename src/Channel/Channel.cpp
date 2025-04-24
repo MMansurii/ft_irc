@@ -188,18 +188,18 @@ void Channel::sendClientListToClient(Client *client)
 void Channel::sendTopicToClient(Client *client)
 {
     const std::string &server = client->getCl_str_info(4);
-    const std::string &nickname = client->getCl_str_info(1);
+    const std::string &alias = client->getCl_str_info(1);
     if (info.channelTopic.empty())
     {
         // RPL_NOTOPIC
-        client->do_TMess(":" + server + " 331 " + nickname + " " + info.channelName + " :No topic is set", 2);
+        client->do_TMess(":" + server + " 331 " + alias + " " + info.channelName + " :No topic is set", 2);
     }
     else
     {
         // RPL_TOPIC
-        client->do_TMess(":" + server + " 332 " + nickname + " " + info.channelName + " :" + info.channelTopic, 2);
+        client->do_TMess(":" + server + " 332 " + alias + " " + info.channelName + " :" + info.channelTopic, 2);
         // RPL_TOPICWHOTIME
-        client->do_TMess(":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime, 2);
+        client->do_TMess(":" + server + " 333 " + alias + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime, 2);
     }
 }
 
@@ -284,6 +284,64 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
     }
 }
 
+// void Channel::broadcastMessage(Client *sender, const std::string &message)
+// {
+//     for (auto client : this->operatorsInChannel)
+//     {
+//         if (client != sender)
+//             client->do_TMess(message, 2);
+//     }
+
+//     for (auto client : this->clientsInChannel)
+//     {
+//         if (client != sender)
+//             client->do_TMess(message, 2);
+//     }
+// }
+
+
+// void Channel::broadcastMessage(Client *sender, const std::string &message)
+// {
+//     // Send message to all unique channel members (operators and regular), excluding sender
+//     std::set<Client*> sent;
+//     for (auto client : this->operatorsInChannel)
+//     {
+//         if (client != sender)
+//         {
+//             client->do_TMess(message, 2);
+//             sent.insert(client);
+//         }
+//     }
+//     for (auto client : this->clientsInChannel)
+//     {
+//         if (client != sender && sent.find(client) == sent.end())
+//         {
+//             client->do_TMess(message, 2);
+//             sent.insert(client);
+//         }
+//     }
+// }
+
+void Channel::broadcastMessage(Client *sender, const std::string &message)
+{
+    // Collect unique recipients (excluding sender)
+    std::set<Client *> recipients;
+    for (auto client : this->operatorsInChannel)
+    {
+        if (client != sender)
+            recipients.insert(client);
+    }
+    for (auto client : this->clientsInChannel)
+    {
+        if (client != sender)
+            recipients.insert(client);
+    }
+    for (auto client : recipients)
+    {
+        client->do_TMess(message, 2);
+    }
+}
+
 // std::string Channel::getChannelModes() const
 // {
 //     std::string modeString = "+";
@@ -302,28 +360,6 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 
 //     return (modeString == "+") ? "" : modeString;
 // }
-
-void Channel::broadcastMessage(Client *sender, const std::string &message)
-{
-    // Send message to all unique channel members (operators and regular), excluding sender
-    std::set<Client*> sent;
-    for (auto client : this->operatorsInChannel)
-    {
-        if (client != sender)
-        {
-            client->do_TMess(message, 2);
-            sent.insert(client);
-        }
-    }
-    for (auto client : this->clientsInChannel)
-    {
-        if (client != sender && sent.find(client) == sent.end())
-        {
-            client->do_TMess(message, 2);
-            sent.insert(client);
-        }
-    }
-}
 
 std::string Channel::getChannelModes() const
 {
@@ -348,40 +384,6 @@ std::string Channel::getChannelModes() const
     return "+" + flags + oss.str();
 }
 
-// void Channel::broadcastMessage(Client *sender, const std::string &message)
-// {
-//     for (auto client : this->operatorsInChannel)
-//     {
-//         if (client != sender)
-//             client->do_TMess(message, 2);
-//     }
-
-//     for (auto client : this->clientsInChannel)
-//     {
-//         if (client != sender)
-//             client->do_TMess(message, 2);
-//     }
-// }
-
-void Channel::broadcastMessage(Client *sender, const std::string &message)
-{
-    // Collect unique recipients (excluding sender)
-    std::set<Client *> recipients;
-    for (auto client : this->operatorsInChannel)
-    {
-        if (client != sender)
-            recipients.insert(client);
-    }
-    for (auto client : this->clientsInChannel)
-    {
-        if (client != sender)
-            recipients.insert(client);
-    }
-    for (auto client : recipients)
-    {
-        client->do_TMess(message, 2);
-    }
-}
 
 // void Channel::handleKickCommand(Client *requester, const std::string &target, const std::string &comment)
 // {
@@ -462,7 +464,7 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
     // Enable or disable invite-only mode (0 off, 1 on)
     info.inviteOnly = (flag == 1) ? 1 : 0;
 
-    const std::string &nickname = client->getCl_str_info(0);
+    const std::string &alias = client->getCl_str_info(0);
     const std::string modeChange = (flag == 1) ? "+i" : "-i";
     const std::string reply = ":" + alias + " MODE " + info.channelName + " " + modeChange;
 

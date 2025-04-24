@@ -135,7 +135,7 @@ int Channel::isOperatorInChannel(const std::string &alias)
 
 int Channel::isClientInvited(const std::string &alias)
 {
-    for (auto &invitedClient : this->invitedClients)
+    for (auto &invitedClient : invitedClients)
     {
         if (invitedClient->getCl_str_info(1) == alias)
         {
@@ -147,16 +147,16 @@ int Channel::isClientInvited(const std::string &alias)
 
 void Channel::addInvitedGuest(Client *newGuest)
 {
-    this->invitedClients.push_back(newGuest);
+    invitedClients.push_back(newGuest);
 }
 
 void Channel::sendClientListToClient(Client *client)
 {
     // Reply Code 353 (USER_LIST_REPLY): Server sends a list of clients in the channel
-    std::string clientListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + this->getChannelDetail(CHANNEL_NAME) + " :";
+    std::string clientListMessage = ":" + client->getCl_str_info(4) + " 353 " + client->getCl_str_info(1) + " = " + getChannelDetail(CHANNEL_NAME) + " :";
 
     bool isFirstOperator = true;
-    for (auto &operatorClient : this->operatorsInChannel)
+    for (auto &operatorClient : operatorsInChannel)
     {
         if (!isFirstOperator)
         {
@@ -167,7 +167,7 @@ void Channel::sendClientListToClient(Client *client)
     }
 
     bool isFirstClient = true;
-    for (auto &regularClient : this->clientsInChannel)
+    for (auto &regularClient : clientsInChannel)
     {
         if (!isFirstClient)
         {
@@ -180,7 +180,7 @@ void Channel::sendClientListToClient(Client *client)
     client->do_TMess(clientListMessage, 2);
 
     // Reply Code 366 (END_OF_USER_LIST_REPLY): Marks the end of the client list
-    std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
+    std::string endOfListMessage = ":" + client->getCl_str_info(4) + " 366 " + client->getCl_str_info(1) + ' ' + getChannelDetail(CHANNEL_NAME) + " :End of /NAMES list";
     client->do_TMess(endOfListMessage, 2);
 }
 
@@ -205,11 +205,11 @@ void Channel::sendTopicToClient(Client *client)
 
 void Channel::removeInvitedClient(const std::string &clientNickname)
 {
-    for (auto iterator = this->invitedClients.begin(); iterator != this->invitedClients.end();)
+    for (auto iterator = invitedClients.begin(); iterator != invitedClients.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
-            iterator = this->invitedClients.erase(iterator);
+            iterator = invitedClients.erase(iterator);
             break;
         }
         else
@@ -221,11 +221,11 @@ void Channel::removeInvitedClient(const std::string &clientNickname)
 
 void Channel::removeClientsInChannel(const std::string &clientNickname)
 {
-    for (auto iterator = this->clientsInChannel.begin(); iterator != this->clientsInChannel.end();)
+    for (auto iterator = clientsInChannel.begin(); iterator != clientsInChannel.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
-            iterator = this->clientsInChannel.erase(iterator);
+            iterator = clientsInChannel.erase(iterator);
             break;
         }
         else
@@ -237,11 +237,11 @@ void Channel::removeClientsInChannel(const std::string &clientNickname)
 
 void Channel::removeOperatorsInChannel(const std::string &clientNickname)
 {
-    for (auto iterator = this->operatorsInChannel.begin(); iterator != this->operatorsInChannel.end();)
+    for (auto iterator = operatorsInChannel.begin(); iterator != operatorsInChannel.end();)
     {
         if ((*iterator)->getCl_str_info(1) == clientNickname)
         {
-            iterator = this->operatorsInChannel.erase(iterator);
+            iterator = operatorsInChannel.erase(iterator);
             break;
         }
         else
@@ -257,19 +257,19 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
     {
         if (!isClientInvited(client->getCl_str_info(1)))
         {
-            return ("473 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :Cannot join channel (+i)");
+            return ("473 " + client->getCl_str_info(1) + ' ' + getChannelDetail(CHANNEL_NAME) + " :Cannot join channel (+i)");
         }
     }
 
     if ((info.maxClients > 0 && info.currentClientCount >= info.maxClients) || info.currentClientCount >= 1000)
     {
-        return ("471 " + client->getCl_str_info(1) + ' ' + this->getChannelDetail(CHANNEL_NAME) + " :Cannot join channel (+l)");
+        return ("471 " + client->getCl_str_info(1) + ' ' + getChannelDetail(CHANNEL_NAME) + " :Cannot join channel (+l)");
     }
 
     if (!info.keyRequired || (providedKey == info.accessKey))
     {
-        this->clientsInChannel.push_back(client);
-        this->info.currentClientCount++;
+        clientsInChannel.push_back(client);
+        info.currentClientCount++;
 
         if (isClientInChannel(client->getCl_str_info(1)))
         {
@@ -286,13 +286,13 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 
 // void Channel::broadcastMessage(Client *sender, const std::string &message)
 // {
-//     for (auto client : this->operatorsInChannel)
+//     for (auto client : operatorsInChannel)
 //     {
 //         if (client != sender)
 //             client->do_TMess(message, 2);
 //     }
 
-//     for (auto client : this->clientsInChannel)
+//     for (auto client : clientsInChannel)
 //     {
 //         if (client != sender)
 //             client->do_TMess(message, 2);
@@ -304,7 +304,7 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 // {
 //     // Send message to all unique channel members (operators and regular), excluding sender
 //     std::set<Client*> sent;
-//     for (auto client : this->operatorsInChannel)
+//     for (auto client : operatorsInChannel)
 //     {
 //         if (client != sender)
 //         {
@@ -312,7 +312,7 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 //             sent.insert(client);
 //         }
 //     }
-//     for (auto client : this->clientsInChannel)
+//     for (auto client : clientsInChannel)
 //     {
 //         if (client != sender && sent.find(client) == sent.end())
 //         {
@@ -326,12 +326,12 @@ void Channel::broadcastMessage(Client *sender, const std::string &message)
 {
     // Collect unique recipients (excluding sender)
     std::set<Client *> recipients;
-    for (auto client : this->operatorsInChannel)
+    for (auto client : operatorsInChannel)
     {
         if (client != sender)
             recipients.insert(client);
     }
-    for (auto client : this->clientsInChannel)
+    for (auto client : clientsInChannel)
     {
         if (client != sender)
             recipients.insert(client);
@@ -393,7 +393,7 @@ std::string Channel::getChannelModes() const
 //         {
 //             std::string kickMsg = ":" + requester->getCl_str_info(1) + " KICK " + info.channelName + ' ' + target + " :" + comment;
 
-//             this->broadcastMessage(requester, kickMsg); // Notify all others
+//             broadcastMessage(requester, kickMsg); // Notify all others
 //             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
 
 //             clientsInChannel.erase(cl); // Remove from channel
@@ -412,7 +412,7 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
             // Format KICK message with full client prefix
             std::string kickMsg = ":" + requester->getCl_str_info(1) + "!" + requester->getCl_str_info(0) + "@" + requester->getCl_str_info(2) + " KICK " + info.channelName + " " + target + " :" + comment;
 
-            this->broadcastMessage(requester, kickMsg); // Notify all others
+            broadcastMessage(requester, kickMsg); // Notify all others
             requester->do_TMess(kickMsg, 2);            // Confirm to the one who issued the KICK
 
             clientsInChannel.erase(it); // Remove from channel

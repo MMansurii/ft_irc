@@ -1,13 +1,18 @@
 #include "Channel.hpp"
+#include <set>
 
 Channel::Channel(const std::string &name, const std::string &key, Client *client)
 {
     info.channelName = name;
     info.accessKey = key;
     info.keyRequired = !key.empty() ? 1 : 0;
+    // Initialize channel modes: invite-only and topic restriction off by default
+    info.inviteOnly = 0;
+    info.topicRestricted = 0;
     info.currentClientCount = 1;
     info.maxClients = 100;
     info.creationTimestamp = "2025-03-14";
+    // Add creator as channel member and operator
     clientsInChannel.push_back(client);
     operatorsInChannel.push_back(client);
 }
@@ -178,6 +183,25 @@ void Channel::sendClientListToClient(Client *client)
     client->do_TMess(endOfListMessage, 2);
 }
 
+// Send the current topic (or a "no topic" reply) to a joining client
+void Channel::sendTopicToClient(Client *client)
+{
+    const std::string &server = client->getCl_str_info(4);
+    const std::string &nickname = client->getCl_str_info(1);
+    if (info.channelTopic.empty())
+    {
+        // RPL_NOTOPIC
+        client->do_TMess(":" + server + " 331 " + nickname + " " + info.channelName + " :No topic is set", 2);
+    }
+    else
+    {
+        // RPL_TOPIC
+        client->do_TMess(":" + server + " 332 " + nickname + " " + info.channelName + " :" + info.channelTopic, 2);
+        // RPL_TOPICWHOTIME
+        client->do_TMess(":" + server + " 333 " + nickname + " " + info.channelName + " " + info.topicSetter + " " + info.lastTopicChangeTime, 2);
+    }
+}
+
 void Channel::removeInvitedClient(const std::string &clientNickname)
 {
     for (auto iterator = this->invitedClients.begin(); iterator != this->invitedClients.end();)
@@ -280,16 +304,23 @@ std::string Channel::attemptJoinChannel(Client *client, const std::string &provi
 
 void Channel::broadcastMessage(Client *sender, const std::string &message)
 {
+    // Send message to all unique channel members (operators and regular), excluding sender
+    std::set<Client*> sent;
     for (auto client : this->operatorsInChannel)
     {
         if (client != sender)
+        {
             client->do_TMess(message, 2);
+            sent.insert(client);
+        }
     }
-
     for (auto client : this->clientsInChannel)
     {
-        if (client != sender)
+        if (client != sender && sent.find(client) == sent.end())
+        {
             client->do_TMess(message, 2);
+            sent.insert(client);
+        }
     }
 }
 
@@ -329,6 +360,8 @@ void Channel::handleKickCommand(Client *requester, const std::string &target, co
 
             clientsInChannel.erase(it); // Remove from channel
             --info.currentClientCount;  // Decrement client count
+            // Also remove operator status if target was an operator
+            removeOperatorsInChannel(target);
             break;
         }
     }
@@ -356,7 +389,8 @@ void Channel::updateInviteOnlyMode(Client *client, int flag)
     if (flag != 1 && flag != -1)
         return;
 
-    info.inviteOnly = flag;
+    // Enable or disable invite-only mode (0 off, 1 on)
+    info.inviteOnly = (flag == 1) ? 1 : 0;
 
     const std::string &nickname = client->getCl_str_info(0);
     const std::string modeChange = (flag == 1) ? "+i" : "-i";
@@ -371,7 +405,8 @@ void Channel::updateTopicRestrictionMode(Client *client, int flag)
     if (flag != 1 && flag != -1)
         return;
 
-    info.inviteOnly = flag;
+    // Enable or disable topic-restricted mode (0 off, 1 on)
+    info.topicRestricted = (flag == 1) ? 1 : 0;
 
     const std::string &nickname = client->getCl_str_info(0);
     const std::string modeChange = (flag == 1) ? "+t" : "-t";

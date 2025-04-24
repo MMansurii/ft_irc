@@ -43,12 +43,16 @@ void Server::handleJOIN(Client* client, std::istringstream& iss, const std::stri
         ":" + client->getCl_str_info(1) + "!" + client->getCl_str_info(1) +
         "@" + client->getCl_str_info(2) + " JOIN " + chanName;
       client->do_TMess(joinMsg, 2);
+      // After joining, send topic (or no-topic) and then the NAMES list
+      chan->sendTopicToClient(client);
       chan->sendClientListToClient(client);
     } else {
       std::string res = chan->attemptJoinChannel(client, chanKey);
       if (!res.empty() && res[0] == ':') {
         client->do_TMess(res, 2);
         chan->broadcastMessage(client, res);
+        // After joining, send topic (or no-topic) and then the NAMES list
+        chan->sendTopicToClient(client);
         chan->sendClientListToClient(client);
       } else {
         client->do_TMess(res, 2);

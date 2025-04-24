@@ -60,6 +60,8 @@ class Channel
 
         void addInvitedGuest(Client *newGuest);
         void sendClientListToClient(Client *client);
+        // Send the current topic (or a "no topic" reply) to a joining client
+        void sendTopicToClient(Client *client);
         std::string attemptJoinChannel( Client *client, const std::string &providedKey);
         void removeInvitedClient(const std::string &clientNickname);
         void removeClientsInChannel(const std::string& clientNickname);
